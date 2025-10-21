@@ -24,6 +24,7 @@ export default defineConfig({
       filename: "remoteEntry.js",
       exposes: {
         "./App": "./src/App.tsx",
+        "./count": "./src/stores/count.ts",
       },
       shared: {
         react: {
@@ -32,6 +33,10 @@ export default defineConfig({
         },
         "react-dom": {
           name: "react-dom",
+          singleton: true,
+        },
+        jotai: {
+          name: "jotai",
           singleton: true,
         },
       },
