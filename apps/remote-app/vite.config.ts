@@ -18,16 +18,15 @@ export default defineConfig({
       exposes: {
         "./App": "./src/App.tsx",
       },
+      publicPath: process.env.VITE_REMOTE_APP_URL || "http://localhost:3200",
       shared: {
         react: {
           name: "react",
           singleton: true,
-          // strictVersion: true,
         },
         "react-dom": {
           name: "react-dom",
           singleton: true,
-          // strictVersion: true,
         },
       },
     }),
