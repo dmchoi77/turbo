@@ -26,6 +26,15 @@ export default defineConfig({
         "./App": "./src/App.tsx",
         "./count": "./src/stores/count.ts",
       },
+      remotes: {
+        hostApp: {
+          entry:
+            process.env.VITE_HOST_APP_URL ||
+            "http://localhost:3100/hostEntry.js",
+          name: "hostApp",
+          type: "module",
+        },
+      },
       shared: {
         react: {
           name: "react",
