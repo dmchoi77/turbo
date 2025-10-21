@@ -31,6 +31,10 @@ export default defineConfig({
           name: "react-dom",
           singleton: true,
         },
+        jotai: {
+          name: "jotai",
+          singleton: true,
+        },
       },
     }),
   ],

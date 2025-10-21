@@ -17,6 +17,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@module-federation/vite": "^1.8.1"
+    "@module-federation/vite": "^1.8.1",
+    "jotai": "^2.15.0"
   }
 }
