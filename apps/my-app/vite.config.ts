@@ -7,9 +7,11 @@ export default defineConfig({
   server: {
     port: 3100,
   },
+  build: {
+    target: "esnext",
+  },
   plugins: [
     react(),
-
     federation({
       name: "host-app",
       remotes: {
