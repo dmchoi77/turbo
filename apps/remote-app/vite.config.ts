@@ -5,19 +5,15 @@ import { federation } from "@module-federation/vite";
 // https://vite.dev/config/
 export default defineConfig({
   server: {
-    port: 3100,
+    port: 3200,
   },
   plugins: [
     react(),
-
     federation({
-      name: "host-app",
-      remotes: {
-        remoteApp: {
-          entry: "http://localhost:3200/remoteEntry.js",
-          name: "remoteApp",
-          type: "module",
-        },
+      name: "remote-app",
+      filename: "remoteEntry.js",
+      exposes: {
+        "./App": "./src/App.tsx",
       },
       shared: {
         react: {
