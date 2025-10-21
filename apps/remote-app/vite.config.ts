@@ -6,7 +6,7 @@ const isProd = process.env.NODE_ENV === "production";
 
 // 배포 환경과 로컬 환경에 따라 base URL을 동적으로 설정
 const remoteBaseUrl = isProd
-  ? "https://turbo-remote-app.vercel.app"
+  ? process.env.VITE_REMOTE_APP_URL
   : "http://localhost:3200";
 
 export default defineConfig({
@@ -29,7 +29,7 @@ export default defineConfig({
       remotes: {
         hostApp: {
           entry:
-            process.env.VITE_HOST_APP_URL ||
+            process.env.VITE_HOST_APP_ENTRY_URL ||
             "http://localhost:3100/hostEntry.js",
           name: "hostApp",
           type: "module",
