@@ -22,12 +22,12 @@ export default defineConfig({
         react: {
           name: "react",
           singleton: true,
-          requiredVersion: "^19.1.1",
+          // strictVersion: true,
         },
         "react-dom": {
           name: "react-dom",
           singleton: true,
-          requiredVersion: "^19.1.1",
+          // strictVersion: true,
         },
       },
     }),
