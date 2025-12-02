@@ -13,7 +13,9 @@
     "generate-svg": "npx @svgr/cli --out-dir ./src/components/svgs --typescript --no-svgo -- ./src/assets/svgs",
     "ts-check": "tsc --noEmit -p ./tsconfig.json",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -85,6 +87,7 @@
     "postcss": "^8.4.41",
     "prettier": "^3.2.5",
     "tailwindcss": "^3.4.10",
+    "vitest": "^2.1.0",
     "webpack": "^5.93.0"
   },
   "packageManager": "pnpm@9.6.0",
