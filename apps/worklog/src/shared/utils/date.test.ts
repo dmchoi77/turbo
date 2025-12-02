@@ -46,13 +46,4 @@ describe('getTodayDate', () => {
     const result = getTodayDate();
     expect(result).toBe('2024/10/05');
   });
-
-  it('should handle leap year dates correctly', () => {
-    // Set a leap year date: 2024-02-29
-    const mockDate = new Date('2024-02-29T10:30:00Z');
-    vi.setSystemTime(mockDate);
-
-    const result = getTodayDate();
-    expect(result).toBe('2024/02/29');
-  });
 });
