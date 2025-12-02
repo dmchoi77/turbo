@@ -38,6 +38,15 @@ describe('getTodayDate', () => {
     expect(result).toBe('2024/12/31');
   });
 
+  it('should pad single digit day correctly when month has two digits', () => {
+    // 2024-10-05 -> month is already two digits, day should be padded
+    const mockDate = new Date('2024-10-05T10:30:00Z');
+    vi.setSystemTime(mockDate);
+
+    const result = getTodayDate();
+    expect(result).toBe('2024/10/05');
+  });
+
   it('should handle leap year dates correctly', () => {
     // Set a leap year date: 2024-02-29
     const mockDate = new Date('2024-02-29T10:30:00Z');
