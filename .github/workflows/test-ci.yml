@@ -58,6 +58,10 @@ jobs:
 
               echo "== store before install (top level) ==";
               ls "$PNPM_STORE_DIR" || echo "store dir missing";
+              echo "== store before install (summary) ==";
+              du -sh "$PNPM_STORE_DIR" || echo "du failed";
+              echo "== store before install (sample files) ==";
+              find "$PNPM_STORE_DIR" -maxdepth 3 -type f | head || echo "find failed";
               echo;
 
               echo "== first install (with shared store, prefer-offline) ==";
@@ -73,6 +77,10 @@ jobs:
 
               echo "== store after first install (top level) ==";
               ls "$PNPM_STORE_DIR" || echo "store dir missing";
+              echo "== store after first install (summary) ==";
+              du -sh "$PNPM_STORE_DIR" || echo "du failed";
+              echo "== store after first install (sample files) ==";
+              find "$PNPM_STORE_DIR" -maxdepth 3 -type f | head || echo "find failed";
               echo;
 
               echo "== second install (same container, should show reused > 0) ==";
