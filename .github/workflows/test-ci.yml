@@ -14,42 +14,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
 
-      # 호스트 쪽 PNPM 캐시 디렉터리 (buildkit-cache-dance가 사용하는 로컬 캐시)
-      - name: Restore pnpm Docker build cache
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "pnpm"
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: pnpm-cache
-          key: pnpm-cache-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            pnpm-cache-
-
-      # pnpm-cache(호스트) <-> /pnpm(도커 빌드) 간 캐시 주입/추출
-      - name: Inject/extract pnpm cache for Docker build
-        uses: reproducible-containers/buildkit-cache-dance@v3.1.0
-        with:
-          cache-map: |
-            {
-              "pnpm-cache": "/pnpm"
-            }
-          # 캐시 히트 시 불필요한 추출을 피하고 싶다면 skip-extraction 플래그를 추가할 수 있음
-          # skip-extraction: ${{ steps.cache.outputs.cache-hit }}
+            ${{ runner.os }}-pnpm-store-
 
       - name: Build CI Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.ci
-          tags: turbo-ci
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        run: docker build -f Dockerfile.ci -t turbo-ci .
 
-      - name: Run tests in Docker
+      - name: Install dependencies in Docker (sharing runner pnpm store)
         run: |
           docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -v "${{ env.STORE_PATH }}:${{ env.STORE_PATH }}" \
             -w /workspace \
+            -e PNPM_STORE_DIR="${{ env.STORE_PATH }}" \
+            turbo-ci \
+            pnpm install --frozen-lockfile
+
+      - name: Run tests in Docker (sharing runner pnpm store)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -v "${{ env.STORE_PATH }}:${{ env.STORE_PATH }}" \
+            -w /workspace \
+            -e PNPM_STORE_DIR="${{ env.STORE_PATH }}" \
             turbo-ci \
             pnpm test
