@@ -7,8 +7,8 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /workspace
 
-# 루트 매니페스트만 먼저 복사해서 레이어 캐시 효율화
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json ./
+# 전체 레포를 먼저 복사 (워크스페이스 패키지까지 포함해서 설치)
+COPY . .
 
 # buildkit-cache-dance + BuildKit cache를 통해 /pnpm 캐시 공유
 # 참고: https://dev.to/henryjw/caching-pnpm-modules-in-docker-builds-in-github-actions-mj7
@@ -17,9 +17,6 @@ RUN --mount=type=cache,target=${PNPM_HOME} \
   && corepack prepare pnpm@9.6.0 --activate \
   && pnpm config set store-dir ${PNPM_HOME} --global \
   && pnpm install --frozen-lockfile --prefer-offline
-
-# 나머지 소스 복사
-COPY . .
 
 CMD ["bash"]
 
