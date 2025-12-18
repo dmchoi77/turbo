@@ -1,28 +1,26 @@
 FROM node:18-bullseye
 
-# pnpm / store 경로 설정
-ENV PNPM_HOME=/usr/local/share/pnpm
-ENV PNPM_STORE_DIR=/pnpm/store
+# PNPM 캐시 디렉터리 (buildkit-cache-dance에서 /pnpm으로 주입/추출)
+ENV PNPM_HOME=/pnpm
+ENV PNPM_STORE_DIR=${PNPM_HOME}
 ENV PATH="$PNPM_HOME:$PATH"
 
-# 작업 디렉터리
 WORKDIR /workspace
 
-# 루트 매니페스트들만 먼저 복사해서 Docker 레이어 캐시 효율화
+# 루트 매니페스트만 먼저 복사해서 레이어 캐시 효율화
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json ./
 
-# BuildKit 캐시 마운트를 사용해서 pnpm store를 재사용하면서 설치
-# (docker build 시 Buildx + GHA 캐시와 연동됨)
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+# buildkit-cache-dance + BuildKit cache를 통해 /pnpm 캐시 공유
+# 참고: https://dev.to/henryjw/caching-pnpm-modules-in-docker-builds-in-github-actions-mj7
+RUN --mount=type=cache,target=${PNPM_HOME} \
   corepack enable \
   && corepack prepare pnpm@9.6.0 --activate \
-  && pnpm config set store-dir /pnpm/store --global \
-  && pnpm install --frozen-lockfile
+  && pnpm config set store-dir ${PNPM_HOME} --global \
+  && pnpm install --frozen-lockfile --prefer-offline
 
-# 나머지 소스 복사 (앱 코드)
+# 나머지 소스 복사
 COPY . .
 
-# 기본 엔트리포인트: 셸
 CMD ["bash"]
 
 

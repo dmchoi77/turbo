@@ -17,47 +17,35 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.6.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "pnpm"
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
+      # 호스트 쪽 PNPM 캐시 디렉터리 (buildkit-cache-dance가 사용하는 로컬 캐시)
+      - name: Restore pnpm Docker build cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: pnpm-cache
+          key: pnpm-cache-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            pnpm-cache-
 
-      - name: Setup Turbo cache
-        uses: actions/cache@v4
+      # pnpm-cache(호스트) <-> /pnpm(도커 빌드) 간 캐시 주입/추출
+      - name: Inject/extract pnpm cache for Docker build
+        uses: reproducible-containers/buildkit-cache-dance@v3.1.0
         with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ hashFiles('turbo.json') }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-
+          cache-map: |
+            {
+              "pnpm-cache": "/pnpm"
+            }
+          # 캐시 히트 시 불필요한 추출을 피하고 싶다면 skip-extraction 플래그를 추가할 수 있음
+          # skip-extraction: ${{ steps.cache.outputs.cache-hit }}
 
-      - name: Build CI Docker image (with pnpm cache)
+      - name: Build CI Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.ci
           tags: turbo-ci
           load: true
-          cache-from: type=gha,scope=pnpm-store
-          cache-to: type=gha,scope=pnpm-store,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run tests in Docker
         run: |
