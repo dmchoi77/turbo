@@ -51,13 +51,32 @@ jobs:
             turbo-ci \
             bash -lc '
               echo "== PNPM_STORE_DIR: $PNPM_STORE_DIR ==";
+              echo "== pnpm config (before) ==";
+              pnpm config get store-dir || true;
+              pnpm config get prefer-offline || true;
+              echo;
+
               echo "== store before install (top level) ==";
               ls "$PNPM_STORE_DIR" || echo "store dir missing";
               echo;
+
+              echo "== first install (with shared store, prefer-offline) ==";
+              pnpm config set store-dir "$PNPM_STORE_DIR" --global;
+              pnpm config set prefer-offline true --global;
               pnpm install --frozen-lockfile;
               echo;
-              echo "== store after install (top level) ==";
+
+              echo "== pnpm config (after first install) ==";
+              pnpm config get store-dir || true;
+              pnpm config get prefer-offline || true;
+              echo;
+
+              echo "== store after first install (top level) ==";
               ls "$PNPM_STORE_DIR" || echo "store dir missing";
+              echo;
+
+              echo "== second install (same container, should show reused > 0) ==";
+              pnpm install --frozen-lockfile;
             '
 
       - name: Run tests in Docker (sharing runner pnpm store)
