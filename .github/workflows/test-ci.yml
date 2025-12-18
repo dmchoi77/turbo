@@ -59,11 +59,9 @@ jobs:
           cache-from: type=gha,scope=pnpm-store
           cache-to: type=gha,scope=pnpm-store,mode=max
 
-      - name: Run tests in Docker (reusing pnpm store)
+      - name: Run tests in Docker
         run: |
           docker run --rm \
-            -v "${{ github.workspace }}:/workspace" \
-            -v "${{ env.STORE_PATH }}:/pnpm/store" \
             -w /workspace \
             turbo-ci \
             pnpm test

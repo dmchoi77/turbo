@@ -16,6 +16,7 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   corepack enable \
   && corepack prepare pnpm@9.6.0 --activate \
+  && pnpm config set store-dir /pnpm/store --global \
   && pnpm install --frozen-lockfile
 
 # 나머지 소스 복사 (앱 코드)
