@@ -1,0 +1,26 @@
+FROM node:18-bullseye
+
+# pnpm / store 경로 설정
+ENV PNPM_HOME=/usr/local/share/pnpm
+ENV PNPM_STORE_DIR=/pnpm/store
+ENV PATH="$PNPM_HOME:$PATH"
+
+# corepack으로 pnpm 9.6.0 활성화
+RUN corepack enable \
+  && corepack prepare pnpm@9.6.0 --activate
+
+# 작업 디렉터리
+WORKDIR /workspace
+
+# 의존성 설치 (빌드 시 pnpm install 실행)
+# 먼저 루트 매니페스트들만 복사해서 Docker 레이어 캐시 효율화
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json ./
+RUN pnpm install --frozen-lockfile
+
+# 나머지 소스 복사
+COPY . .
+
+# 기본 엔트리포인트: 셸
+CMD ["bash"]
+
+
