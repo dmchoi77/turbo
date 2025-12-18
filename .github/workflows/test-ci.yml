@@ -41,7 +41,7 @@ jobs:
       - name: Build CI Docker image
         run: docker build -f Dockerfile.ci -t turbo-ci .
 
-      - name: Install dependencies in Docker (debug PNPM store sharing)
+      - name: Install dependencies in Docker (sharing runner pnpm store)
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
@@ -50,32 +50,6 @@ jobs:
             -e STORE_PATH="${{ env.STORE_PATH }}" \
             turbo-ci \
             bash -lc '
-              echo "== HOST/CONTAINER STORE_PATH: $STORE_PATH ==";
-              echo "== pnpm default store-dir (inside container) ==";
-              pnpm store path || true;
-              echo;
-
-              echo "== store before install (top level) ==";
-              ls "$STORE_PATH" || echo "store dir missing";
-              echo "== store before install (summary) ==";
-              du -sh "$STORE_PATH" || echo "du failed";
-              echo "== store before install (sample files) ==";
-              find "$STORE_PATH" -maxdepth 3 -type f | head || echo "find failed";
-              echo;
-
-              echo "== first install (forcing shared store-dir) ==";
-              pnpm install --store-dir "$STORE_PATH" --frozen-lockfile;
-              echo;
-
-              echo "== store after first install (top level) ==";
-              ls "$STORE_PATH" || echo "store dir missing";
-              echo "== store after first install (summary) ==";
-              du -sh "$STORE_PATH" || echo "du failed";
-              echo "== store after first install (sample files) ==";
-              find "$STORE_PATH" -maxdepth 3 -type f | head || echo "find failed";
-              echo;
-
-              echo "== second install (same container, should show reused > 0) ==";
               pnpm install --store-dir "$STORE_PATH" --frozen-lockfile;
             '
 
