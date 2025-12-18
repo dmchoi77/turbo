@@ -47,44 +47,36 @@ jobs:
             -v "${{ github.workspace }}:/workspace" \
             -v "${{ env.STORE_PATH }}:${{ env.STORE_PATH }}" \
             -w /workspace \
-            -e PNPM_STORE_DIR="${{ env.STORE_PATH }}" \
+            -e STORE_PATH="${{ env.STORE_PATH }}" \
             turbo-ci \
             bash -lc '
-              echo "== PNPM_STORE_DIR: $PNPM_STORE_DIR ==";
-              echo "== pnpm config (before) ==";
-              pnpm config get store-dir || true;
-              pnpm config get prefer-offline || true;
+              echo "== HOST/CONTAINER STORE_PATH: $STORE_PATH ==";
+              echo "== pnpm default store-dir (inside container) ==";
+              pnpm store path || true;
               echo;
 
               echo "== store before install (top level) ==";
-              ls "$PNPM_STORE_DIR" || echo "store dir missing";
+              ls "$STORE_PATH" || echo "store dir missing";
               echo "== store before install (summary) ==";
-              du -sh "$PNPM_STORE_DIR" || echo "du failed";
+              du -sh "$STORE_PATH" || echo "du failed";
               echo "== store before install (sample files) ==";
-              find "$PNPM_STORE_DIR" -maxdepth 3 -type f | head || echo "find failed";
+              find "$STORE_PATH" -maxdepth 3 -type f | head || echo "find failed";
               echo;
 
-              echo "== first install (with shared store, prefer-offline) ==";
-              pnpm config set store-dir "$PNPM_STORE_DIR" --global;
-              pnpm config set prefer-offline true --global;
-              pnpm install --frozen-lockfile;
-              echo;
-
-              echo "== pnpm config (after first install) ==";
-              pnpm config get store-dir || true;
-              pnpm config get prefer-offline || true;
+              echo "== first install (forcing shared store-dir) ==";
+              pnpm install --store-dir "$STORE_PATH" --frozen-lockfile;
               echo;
 
               echo "== store after first install (top level) ==";
-              ls "$PNPM_STORE_DIR" || echo "store dir missing";
+              ls "$STORE_PATH" || echo "store dir missing";
               echo "== store after first install (summary) ==";
-              du -sh "$PNPM_STORE_DIR" || echo "du failed";
+              du -sh "$STORE_PATH" || echo "du failed";
               echo "== store after first install (sample files) ==";
-              find "$PNPM_STORE_DIR" -maxdepth 3 -type f | head || echo "find failed";
+              find "$STORE_PATH" -maxdepth 3 -type f | head || echo "find failed";
               echo;
 
               echo "== second install (same container, should show reused > 0) ==";
-              pnpm install --frozen-lockfile;
+              pnpm install --store-dir "$STORE_PATH" --frozen-lockfile;
             '
 
       - name: Run tests in Docker (sharing runner pnpm store)
