@@ -116,25 +116,28 @@ RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
 FROM base AS runner
 WORKDIR /app
 
-# 최종 스테이지에서도 캐시 접근 가능한지 확인 (선택적)
-# ⚠️ 주의: runner 스테이지는 최종 이미지이므로, 여기서 캐시를 마운트하면
-# buildkit-cache-dance가 추출할 수 있지만, 이미지 크기가 커질 수 있음
-# 대신 cache-extraction 스테이지를 타겟으로 빌드하는 것이 좋음
-RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
-    echo "=== RUNNER STAGE: Final cache verification (optional) ===" && \
+# ❌ 실패 시나리오 테스트: 최종 스테이지에서 다른 id 사용
+# installer 스테이지의 캐시(id=pnpm-store)를 사용하지 못하고 새로운 빈 캐시(id=runner-cache) 사용
+# buildkit-cache-dance가 Extract할 때 빈 캐시가 추출됨 (256 bytes)
+# ⚠️ 주의: id를 다르게 하여 실패 시나리오를 재현
+RUN --mount=type=cache,target=/pnpm,id=runner-cache \
+    echo "=== RUNNER STAGE: Final stage with DIFFERENT cache ID ===" && \
+    echo "⚠️ Using id=runner-cache instead of id=pnpm-store" && \
+    echo "❌ This is a NEW empty cache, not the one from installer stage" && \
     STORE_PATH=$(pnpm store path) && \
     echo "Store path: $STORE_PATH" && \
     if [ -d "$STORE_PATH" ] && [ "$(ls -A $STORE_PATH 2>/dev/null)" ]; then \
-      echo "✅ Cache accessible in runner stage: YES" && \
-      du -sh "$STORE_PATH" && \
-      find "$STORE_PATH" -type f 2>/dev/null | wc -l | xargs echo "File count:"; \
+      echo "Cache exists but it's empty (new cache)"; \
     else \
-      echo "⚠️ Cache NOT accessible in runner stage (this is OK if using cache-extraction stage)"; \
+      echo "Cache NOT found"; \
     fi && \
+    echo "❌ buildkit-cache-dance will extract an empty cache (256 bytes)" && \
+    echo "This is intentional for testing failure scenario" && \
     echo "=== RUNNER STAGE: Verification complete ==="
 
 # 최종 스테이지 설정
-# ⚠️ 중요: buildkit-cache-dance가 캐시를 추출하려면 cache-extraction 스테이지를 타겟으로 빌드해야 함
-# 또는 runner 스테이지에서 캐시를 마운트한 상태로 빌드해야 함
+# ⚠️ 실패 시나리오: runner 스테이지에서 다른 id(id=runner-cache)를 사용하여
+# installer 스테이지의 캐시(id=pnpm-store)를 사용하지 못함
+# buildkit-cache-dance가 추출할 때 빈 캐시가 추출됨 (256 bytes)
 FROM runner
 
