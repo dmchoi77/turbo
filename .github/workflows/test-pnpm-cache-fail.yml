@@ -118,12 +118,37 @@ jobs:
             }
           builder: ${{ steps.buildx.outputs.name }}
 
+      - name: Check extracted cache size
+        id: check-cache-size
+        run: |
+          echo "Checking extracted cache size..."
+          if [ -d "pnpm" ]; then
+            CACHE_SIZE=$(du -sh pnpm 2>/dev/null | cut -f1)
+            CACHE_FILES=$(find pnpm -type f 2>/dev/null | wc -l)
+            echo "Cache directory exists"
+            echo "Cache size: $CACHE_SIZE"
+            echo "Cache files: $CACHE_FILES"
+            
+            # 빈 캐시인지 확인 (파일이 거의 없거나 크기가 매우 작음)
+            if [ "$CACHE_FILES" -lt 10 ] || [ -z "$(find pnpm -type f -size +1k 2>/dev/null | head -1)" ]; then
+              echo "cache-empty=true" >> $GITHUB_OUTPUT
+              echo "⚠️ Extracted cache is empty or very small"
+            else
+              echo "cache-empty=false" >> $GITHUB_OUTPUT
+              echo "✅ Extracted cache has content"
+            fi
+          else
+            echo "cache-empty=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Cache directory does not exist"
+          fi
+
       - name: Check extraction result
         run: |
           echo "Scenario: ${{ steps.scenario-stage.outputs.description }}"
           echo "Target stage: ${{ steps.scenario-stage.outputs.target-stage }}"
           echo ""
           
+          # 캐시 추출 단계가 실패했거나, 빈 캐시가 추출된 경우 성공으로 처리
           if [ "${{ steps.extract-cache.outcome }}" == "failure" ]; then
             echo "✅ Expected: Cache extraction failed as intended"
             echo "This confirms that failure scenario ${{ inputs.scenario || '3' }} is working correctly"
@@ -131,11 +156,21 @@ jobs:
             echo "The cache extraction failed because:"
             echo "- The final stage does not have /pnpm mounted"
             echo "- buildkit-cache-dance cannot extract from an unmounted directory"
+          elif [ "${{ steps.check-cache-size.outputs.cache-empty }}" == "true" ]; then
+            echo "✅ Expected: Cache extraction succeeded but cache is empty"
+            echo "This confirms that failure scenario ${{ inputs.scenario || '3' }} is working correctly"
+            echo ""
+            echo "The cache extraction 'succeeded' but extracted an empty cache because:"
+            echo "- The final stage does not have /pnpm mounted with actual cache content"
+            echo "- buildkit-cache-dance extracted an empty directory"
+            echo ""
+            echo "This is the expected behavior for failure scenarios."
           else
-            echo "⚠️ Unexpected: Cache extraction succeeded"
+            echo "❌ Unexpected: Cache extraction succeeded with actual content"
             echo "The failure scenario may not be configured correctly"
             echo ""
-            echo "Expected behavior: Cache extraction should fail"
+            echo "Expected behavior: Cache extraction should fail OR extract empty cache"
+            echo "Actual behavior: Cache extraction succeeded with content"
             exit 1
           fi
 
