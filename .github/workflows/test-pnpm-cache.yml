@@ -64,7 +64,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./dockerfiles/test-pnpm-cache.dockerfile
+          file: ./dockerfiles/test-pnpm-cache-multistage.dockerfile
           tags: |
             test-pnpm-cache:latest
           # outputs: type=docker,dest=/tmp/test-image.tar
