@@ -24,65 +24,23 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/*/package.json ./packages/
 COPY apps/*/package.json ./apps/
 
-# 의존성 설치 
-# fetch로 먼저 다운로드만 하고, offline 모드로 설치하여 속도 향상
-# --ignore-scripts: husky 등 prepare 스크립트 실행 방지 (Docker에서는 불필요)
-# 
-# ❌ 실패 시나리오 테스트: installer 스테이지에서 다른 경로에 캐시를 마운트
-# buildkit-cache-dance가 Extract할 때 /pnpm을 찾을 수 없음
-# ⚠️ 주의: 다른 경로(/pnpm-cache)에 캐시를 마운트하여 실패 시나리오를 재현
+# 의존성 설치
 RUN --mount=type=cache,target=/pnpm-cache,id=installer-cache \
-    echo "=== INSTALLER STAGE: Using DIFFERENT cache PATH (/pnpm-cache) ===" && \
-    echo "⚠️ Using target=/pnpm-cache instead of target=/pnpm" && \
-    echo "❌ buildkit-cache-dance looks for /pnpm, but cache is at /pnpm-cache" && \
-    echo "PNPM_HOME: $PNPM_HOME" && \
     pnpm config set store-dir /pnpm-cache && \
-    echo "=== Starting pnpm fetch and install ===" && \
     pnpm fetch && \
-    pnpm install --offline --frozen-lockfile --ignore-scripts 2>&1 | grep -E "(reused|Progress:|Done)" && \
-    echo "=== After install ===" && \
-    pnpm store path | xargs du -sh 2>/dev/null || echo "Store not found" && \
-    echo "=== Store verification ===" && \
-    if [ -d "$(pnpm store path)" ]; then \
-      echo "Store directory exists" && \
-      du -sh "$(pnpm store path)" && \
-      find "$(pnpm store path)" -type f 2>/dev/null | wc -l | xargs echo "Total files in store:"; \
-    fi && \
-    echo "❌ This cache is at /pnpm-cache, so buildkit-cache-dance will extract an empty cache from /pnpm"
+    pnpm install --offline --frozen-lockfile --ignore-scripts
 
 # ===== BUILDER STAGE =====
 FROM installer AS builder
 WORKDIR /app
 
-# ❌ 실패 시나리오 테스트: builder 스테이지에서 캐시를 마운트하지 않음
-# buildkit-cache-dance가 Extract할 때 builder 스테이지에서 캐시를 찾을 수 없음
-# ⚠️ 주의: 캐시 마운트를 제거하여 실패 시나리오를 재현
-RUN echo "=== BUILDER STAGE: WITHOUT cache mount ===" && \
-    echo "⚠️ /pnpm is NOT mounted here" && \
-    echo "❌ This is intentional for testing failure scenario" && \
-    echo "=== BUILDER STAGE: Verification complete ==="
-
-# 실제 빌드가 있다면 여기서 실행
-# RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
-#     pnpm build
+# 빌드 작업 (캐시 마운트 없음)
+RUN echo "Builder stage"
 
 # ===== RUNNER STAGE (최종 이미지) =====
 FROM base AS runner
 WORKDIR /app
 
-# ❌ 실패 시나리오 테스트: 최종 스테이지에서 캐시를 마운트하지 않음
-# buildkit-cache-dance가 Extract할 때 /pnpm이 마운트되지 않아 추출 실패 또는 빈 캐시 추출
-# ⚠️ 주의: 캐시 마운트를 완전히 제거하여 실패 시나리오를 재현
-RUN echo "=== RUNNER STAGE: Final stage WITHOUT cache mount ===" && \
-    echo "⚠️ /pnpm is NOT mounted here" && \
-    echo "❌ buildkit-cache-dance cannot extract cache from unmounted directory" && \
-    echo "This is intentional for testing failure scenario" && \
-    ls -la /pnpm 2>/dev/null || echo "/pnpm does not exist or is empty" && \
-    echo "=== RUNNER STAGE: Verification complete ==="
-
-# 최종 스테이지 설정
-# ⚠️ 실패 시나리오: runner 스테이지에서 캐시를 마운트하지 않아
-# buildkit-cache-dance가 Extract할 때 /pnpm을 찾을 수 없음
-# 결과: 빈 캐시(256 bytes)가 추출되거나 추출 실패
+# 최종 스테이지
 FROM runner
 
