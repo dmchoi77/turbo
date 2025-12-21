@@ -43,11 +43,16 @@ FROM builder AS runner
 WORKDIR /app
 
 # 최종 스테이지에서 캐시를 마운트하여 buildkit-cache-dance가 추출할 수 있도록 함
+# 이 RUN 명령이 실행되는 동안 /pnpm이 마운트되어 있어야 buildkit-cache-dance가 추출 가능
 RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
     echo "=== Preparing pnpm store cache for extraction ===" && \
     pnpm store path && \
-    echo "=== Cache is mounted and ready for buildkit-cache-dance extraction ==="
-
-# 최종 스테이지
-FROM runner
+    echo "=== Cache is mounted and ready for buildkit-cache-dance extraction ===" && \
+    if [ -d "$(pnpm store path)" ]; then \
+      echo "✅ Store directory exists: $(pnpm store path)" && \
+      du -sh "$(pnpm store path)" && \
+      find "$(pnpm store path)" -type f 2>/dev/null | wc -l | xargs echo "Total files in store:"; \
+    else \
+      echo "❌ Store directory does not exist"; \
+    fi
 
