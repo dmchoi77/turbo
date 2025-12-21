@@ -56,7 +56,6 @@ jobs:
             {
               "pnpm": "/pnpm"
             }
-          skip-extraction: ${{ steps.pnpm-cache.outputs.cache-hit != 'true' }}
           builder: ${{ steps.buildx.outputs.name }}
 
       - name: Build Docker image (with pnpm install)

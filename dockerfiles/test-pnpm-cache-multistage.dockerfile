@@ -25,8 +25,8 @@ COPY packages/*/package.json ./packages/
 COPY apps/*/package.json ./apps/
 
 # 의존성 설치
-RUN --mount=type=cache,target=/pnpm-cache,id=installer-cache \
-    pnpm config set store-dir /pnpm-cache && \
+RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
+    pnpm config set store-dir /pnpm && \
     pnpm fetch && \
     pnpm install --frozen-lockfile --ignore-scripts
 
@@ -34,12 +34,19 @@ RUN --mount=type=cache,target=/pnpm-cache,id=installer-cache \
 FROM installer AS builder
 WORKDIR /app
 
-# 빌드 작업 (캐시 마운트 없음)
-RUN echo "Builder stage"
+# 빌드 작업 (캐시 마운트)
+RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
+    echo "Builder stage"
 
 # ===== RUNNER STAGE (최종 이미지) =====
 FROM builder AS runner
 WORKDIR /app
+
+# 최종 스테이지에서 캐시를 마운트하여 buildkit-cache-dance가 추출할 수 있도록 함
+RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
+    echo "=== Preparing pnpm store cache for extraction ===" && \
+    pnpm store path && \
+    echo "=== Cache is mounted and ready for buildkit-cache-dance extraction ==="
 
 # 최종 스테이지
 FROM runner
