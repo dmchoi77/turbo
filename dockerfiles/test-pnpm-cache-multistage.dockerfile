@@ -64,24 +64,13 @@ RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
 FROM installer AS builder
 WORKDIR /app
 
-# 캐시가 installer 스테이지에서 builder 스테이지로 제대로 전달되는지 확인
-# ⚠️ 중요: 같은 캐시 ID 사용
-RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
-    echo "=== BUILDER STAGE: Verifying cache from installer stage ===" && \
-    STORE_PATH=$(pnpm store path) && \
-    echo "Store path: $STORE_PATH" && \
-    if [ -d "$STORE_PATH" ] && [ "$(ls -A $STORE_PATH 2>/dev/null)" ]; then \
-      echo "✅ Cache exists from previous stage: YES" && \
-      du -sh "$STORE_PATH" && \
-      find "$STORE_PATH" -type f 2>/dev/null | wc -l | xargs echo "File count:" && \
-      echo "✅ Cache successfully shared between stages!"; \
-    else \
-      echo "❌ Cache NOT found - cache sharing failed!"; \
-    fi && \
-    echo "=== BUILDER STAGE: Testing pnpm commands with cached store ===" && \
-    pnpm --version && \
-    pnpm store path && \
-    echo "=== BUILDER STAGE: Cache verification complete ==="
+# ❌ 실패 시나리오 테스트: builder 스테이지에서 캐시를 마운트하지 않음
+# buildkit-cache-dance가 Extract할 때 builder 스테이지에서 캐시를 찾을 수 없음
+# ⚠️ 주의: 캐시 마운트를 제거하여 실패 시나리오를 재현
+RUN echo "=== BUILDER STAGE: WITHOUT cache mount ===" && \
+    echo "⚠️ /pnpm is NOT mounted here" && \
+    echo "❌ This is intentional for testing failure scenario" && \
+    echo "=== BUILDER STAGE: Verification complete ==="
 
 # 실제 빌드가 있다면 여기서 실행
 # RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
