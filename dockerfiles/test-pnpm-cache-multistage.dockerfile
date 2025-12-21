@@ -87,57 +87,23 @@ RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
 # RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
 #     pnpm build
 
-# ===== CACHE EXTRACTION STAGE =====
-# buildkit-cache-dance가 캐시를 추출할 수 있도록 별도 스테이지 생성
-# 이 스테이지는 최종 이미지에 포함되지 않지만, 빌드 중에 실행되어 캐시를 마운트 상태로 유지
-FROM builder AS cache-extraction
-WORKDIR /app
-
-# ⚠️ 핵심: buildkit-cache-dance가 추출할 수 있도록 캐시를 마운트하고 확인
-# 이 RUN 명령이 실행되는 동안 /pnpm이 마운트되어 있어야 추출 가능
-RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
-    echo "=== CACHE EXTRACTION STAGE: Preparing cache for extraction ===" && \
-    STORE_PATH=$(pnpm store path) && \
-    echo "Store path: $STORE_PATH" && \
-    if [ -d "$STORE_PATH" ] && [ "$(ls -A $STORE_PATH 2>/dev/null)" ]; then \
-      echo "✅ Cache is mounted and ready for extraction" && \
-      du -sh "$STORE_PATH" && \
-      find "$STORE_PATH" -type f 2>/dev/null | wc -l | xargs echo "Total files:" && \
-      echo "✅ This stage ensures /pnpm is mounted when buildkit-cache-dance extracts"; \
-    else \
-      echo "❌ Cache NOT mounted - extraction will fail!"; \
-    fi && \
-    # 캐시 디렉토리 구조 확인 (buildkit-cache-dance가 찾을 수 있도록)
-    echo "=== Cache directory structure ===" && \
-    ls -la /pnpm 2>/dev/null || echo "/pnpm not accessible" && \
-    echo "=== Cache extraction stage complete ==="
-
 # ===== RUNNER STAGE (최종 이미지) =====
 FROM base AS runner
 WORKDIR /app
 
-# ❌ 실패 시나리오 테스트: 최종 스테이지에서 다른 id 사용
-# installer 스테이지의 캐시(id=pnpm-store)를 사용하지 못하고 새로운 빈 캐시(id=runner-cache) 사용
-# buildkit-cache-dance가 Extract할 때 빈 캐시가 추출됨 (256 bytes)
-# ⚠️ 주의: id를 다르게 하여 실패 시나리오를 재현
-RUN --mount=type=cache,target=/pnpm,id=runner-cache \
-    echo "=== RUNNER STAGE: Final stage with DIFFERENT cache ID ===" && \
-    echo "⚠️ Using id=runner-cache instead of id=pnpm-store" && \
-    echo "❌ This is a NEW empty cache, not the one from installer stage" && \
-    STORE_PATH=$(pnpm store path) && \
-    echo "Store path: $STORE_PATH" && \
-    if [ -d "$STORE_PATH" ] && [ "$(ls -A $STORE_PATH 2>/dev/null)" ]; then \
-      echo "Cache exists but it's empty (new cache)"; \
-    else \
-      echo "Cache NOT found"; \
-    fi && \
-    echo "❌ buildkit-cache-dance will extract an empty cache (256 bytes)" && \
+# ❌ 실패 시나리오 테스트: 최종 스테이지에서 캐시를 마운트하지 않음
+# buildkit-cache-dance가 Extract할 때 /pnpm이 마운트되지 않아 추출 실패 또는 빈 캐시 추출
+# ⚠️ 주의: 캐시 마운트를 완전히 제거하여 실패 시나리오를 재현
+RUN echo "=== RUNNER STAGE: Final stage WITHOUT cache mount ===" && \
+    echo "⚠️ /pnpm is NOT mounted here" && \
+    echo "❌ buildkit-cache-dance cannot extract cache from unmounted directory" && \
     echo "This is intentional for testing failure scenario" && \
+    ls -la /pnpm 2>/dev/null || echo "/pnpm does not exist or is empty" && \
     echo "=== RUNNER STAGE: Verification complete ==="
 
 # 최종 스테이지 설정
-# ⚠️ 실패 시나리오: runner 스테이지에서 다른 id(id=runner-cache)를 사용하여
-# installer 스테이지의 캐시(id=pnpm-store)를 사용하지 못함
-# buildkit-cache-dance가 추출할 때 빈 캐시가 추출됨 (256 bytes)
+# ⚠️ 실패 시나리오: runner 스테이지에서 캐시를 마운트하지 않아
+# buildkit-cache-dance가 Extract할 때 /pnpm을 찾을 수 없음
+# 결과: 빈 캐시(256 bytes)가 추출되거나 추출 실패
 FROM runner
 

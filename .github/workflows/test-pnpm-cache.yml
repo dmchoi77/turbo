@@ -70,6 +70,7 @@ jobs:
           # outputs: type=docker,dest=/tmp/test-image.tar
 
       - name: Extract cache from Docker
+        id: extract-cache
         uses: reproducible-containers/buildkit-cache-dance@v3
         with:
           cache-map: |
@@ -77,6 +78,32 @@ jobs:
               "pnpm": "/pnpm"
             }
           builder: ${{ steps.buildx.outputs.name }}
+
+      - name: Verify extracted cache size
+        run: |
+          echo "=== Verifying extracted cache ==="
+          if [ -d "pnpm" ]; then
+            CACHE_SIZE_BYTES=$(du -sb pnpm 2>/dev/null | cut -f1)
+            CACHE_SIZE=$(du -sh pnpm 2>/dev/null | cut -f1)
+            CACHE_FILES=$(find pnpm -type f 2>/dev/null | wc -l)
+            echo "Cache directory exists"
+            echo "Cache size: $CACHE_SIZE ($CACHE_SIZE_BYTES bytes)"
+            echo "Cache files: $CACHE_FILES"
+            
+            # 빈 캐시인지 확인 (256 bytes 이하 또는 파일이 거의 없음)
+            if [ "$CACHE_SIZE_BYTES" -le 1024 ] || [ "$CACHE_FILES" -lt 10 ]; then
+              echo "❌ WARNING: Extracted cache is empty or very small!"
+              echo "This indicates the failure scenario is working correctly"
+              echo "The cache extraction 'succeeded' but extracted an empty cache"
+              echo "This happens when the final stage uses a different cache ID or no cache mount"
+            else
+              echo "✅ Cache has content ($CACHE_SIZE_BYTES bytes, $CACHE_FILES files)"
+              echo "This indicates the cache extraction is working correctly"
+            fi
+          else
+            echo "❌ Cache directory does not exist"
+            echo "Cache extraction may have failed"
+          fi
 
       - name: Clean up temporary build image file
         if: always()
