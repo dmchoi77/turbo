@@ -25,7 +25,8 @@ COPY packages/*/package.json ./packages/
 COPY apps/*/package.json ./apps/
 
 # 의존성 설치
-RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
+# 단일 스테이지 Dockerfile과 동일하게 id를 지정하지 않음
+RUN --mount=type=cache,target=/pnpm \
     pnpm config set store-dir /pnpm && \
     pnpm fetch && \
     pnpm install --frozen-lockfile --ignore-scripts
@@ -35,7 +36,7 @@ FROM installer AS builder
 WORKDIR /app
 
 # 빌드 작업 (캐시 마운트)
-RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
+RUN --mount=type=cache,target=/pnpm \
     echo "Builder stage"
 
 # ===== RUNNER STAGE (최종 이미지) =====
@@ -43,16 +44,9 @@ FROM builder AS runner
 WORKDIR /app
 
 # 최종 스테이지에서 캐시를 마운트하여 buildkit-cache-dance가 추출할 수 있도록 함
+# 단일 스테이지 Dockerfile과 동일하게 마지막 RUN 명령에서 캐시를 마운트
 # 이 RUN 명령이 실행되는 동안 /pnpm이 마운트되어 있어야 buildkit-cache-dance가 추출 가능
-RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
-    echo "=== Preparing pnpm store cache for extraction ===" && \
+RUN --mount=type=cache,target=/pnpm \
     pnpm store path && \
-    echo "=== Cache is mounted and ready for buildkit-cache-dance extraction ===" && \
-    if [ -d "$(pnpm store path)" ]; then \
-      echo "✅ Store directory exists: $(pnpm store path)" && \
-      du -sh "$(pnpm store path)" && \
-      find "$(pnpm store path)" -type f 2>/dev/null | wc -l | xargs echo "Total files in store:"; \
-    else \
-      echo "❌ Store directory does not exist"; \
-    fi
+    echo "=== Cache is mounted and ready for buildkit-cache-dance extraction ==="
 
