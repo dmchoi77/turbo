@@ -28,7 +28,7 @@ COPY apps/*/package.json ./apps/
 RUN --mount=type=cache,target=/pnpm-cache,id=installer-cache \
     pnpm config set store-dir /pnpm-cache && \
     pnpm fetch && \
-    pnpm install --offline --frozen-lockfile --ignore-scripts
+    pnpm install --frozen-lockfile --ignore-scripts
 
 # ===== BUILDER STAGE =====
 FROM installer AS builder
