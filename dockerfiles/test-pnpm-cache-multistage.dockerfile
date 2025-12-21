@@ -28,25 +28,14 @@ COPY apps/*/package.json ./apps/
 # fetch로 먼저 다운로드만 하고, offline 모드로 설치하여 속도 향상
 # --ignore-scripts: husky 등 prepare 스크립트 실행 방지 (Docker에서는 불필요)
 # 
-# ⚠️ 캐시 추출 문제 분석을 위한 두 가지 방식 테스트:
-# 
-# 방식 1: --mount=type=cache 사용 (권장)
-# - 장점: 캐시가 빌드 컨테이너 외부에 저장되어 추출 가능
-# - 단점: 각 RUN 명령마다 마운트 필요, 스테이지 간 공유를 위해 id 필요
-RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
-    echo "=== INSTALLER STAGE: pnpm store location and size ===" && \
+# ❌ 실패 시나리오 테스트: installer 스테이지에서 다른 id를 사용하여 캐시를 분리
+# buildkit-cache-dance가 Extract할 때 /pnpm을 찾을 수 없음
+# ⚠️ 주의: 다른 id를 사용하여 캐시를 분리하여 실패 시나리오를 재현
+RUN --mount=type=cache,target=/pnpm,id=installer-cache \
+    echo "=== INSTALLER STAGE: Using DIFFERENT cache ID (installer-cache) ===" && \
+    echo "⚠️ Using id=installer-cache instead of id=pnpm-store" && \
+    echo "❌ This cache will NOT be extracted by buildkit-cache-dance" && \
     echo "PNPM_HOME: $PNPM_HOME" && \
-    echo "PNPM contents before install: $(ls -la ${PNPM_HOME} 2>/dev/null || echo 'empty')" && \
-    STORE_PATH=$(pnpm store path) && \
-    echo "Store path: $STORE_PATH" && \
-    if [ -d "$STORE_PATH" ] && [ "$(ls -A $STORE_PATH 2>/dev/null)" ]; then \
-      echo "Store exists: YES" && \
-      du -sh "$STORE_PATH" && \
-      find "$STORE_PATH" -type f 2>/dev/null | wc -l | xargs echo "File count:"; \
-    else \
-      echo "Store exists: NO"; \
-    fi && \
-    echo "===========================================" && \
     pnpm config set store-dir ${PNPM_HOME} && \
     echo "=== Starting pnpm fetch and install ===" && \
     pnpm fetch && \
@@ -58,7 +47,8 @@ RUN --mount=type=cache,target=/pnpm,id=pnpm-store \
       echo "Store directory exists" && \
       du -sh "$(pnpm store path)" && \
       find "$(pnpm store path)" -type f 2>/dev/null | wc -l | xargs echo "Total files in store:"; \
-    fi
+    fi && \
+    echo "❌ This cache uses id=installer-cache, so buildkit-cache-dance will extract an empty cache"
 
 # ===== BUILDER STAGE =====
 FROM installer AS builder
