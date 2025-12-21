@@ -38,7 +38,7 @@ WORKDIR /app
 RUN echo "Builder stage"
 
 # ===== RUNNER STAGE (최종 이미지) =====
-FROM base AS runner
+FROM builder AS runner
 WORKDIR /app
 
 # 최종 스테이지
