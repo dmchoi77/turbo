@@ -39,12 +39,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container
-          buildkitd-flags: --debug
-          buildkitd-config-inline: |
-            [worker.oci]
-              max-parallelism = 16
-              gc = true
-              gckeepstorage = 20000
 
       - name: Cache pnpm store
         id: pnpm-cache
@@ -65,30 +59,6 @@ jobs:
           skip-extraction: ${{ steps.pnpm-cache.outputs.cache-hit != 'true' }}
           builder: ${{ steps.buildx.outputs.name }}
 
-      - name: Configure AWS credentials
-        if: ${{ inputs.push-to-ecr == 'true' || github.event_name == 'push' }}
-        uses: aws-actions/configure-aws-credentials@v4.0.2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        if: ${{ inputs.push-to-ecr == 'true' || github.event_name == 'push' }}
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set ECR configuration
-        id: ecr-config
-        if: ${{ inputs.push-to-ecr == 'true' || github.event_name == 'push' }}
-        run: |
-          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-          ECR_REPO="${{ env.ECR_REPOSITORY }}"
-          echo "ecr-registry=${ECR_REGISTRY}" >> $GITHUB_OUTPUT
-          echo "ecr-tag-version=${ECR_REGISTRY}/${ECR_REPO}:test-${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "ecr-tag-latest=${ECR_REGISTRY}/${ECR_REPO}:latest" >> $GITHUB_OUTPUT
-          echo "ecr-cache-from=type=registry,ref=${ECR_REGISTRY}/${ECR_REPO}:latest" >> $GITHUB_OUTPUT
-          echo "ecr-cache-to=type=registry,ref=${ECR_REGISTRY}/${ECR_REPO}:latest,mode=max" >> $GITHUB_OUTPUT
-
       - name: Build Docker image (with pnpm install)
         id: docker-build
         uses: docker/build-push-action@v6
@@ -96,12 +66,8 @@ jobs:
           context: .
           file: ./dockerfiles/test-pnpm-cache.dockerfile
           tags: |
-            ${{ steps.ecr-config.outputs.ecr-tag-version || 'test-pnpm-cache:latest' }}
-            ${{ steps.ecr-config.outputs.ecr-tag-latest || '' }}
-          push: ${{ inputs.push-to-ecr == 'true' || github.event_name == 'push' }}
-          outputs: type=docker,dest=/tmp/test-image.tar
-          cache-from: ${{ steps.ecr-config.outputs.ecr-cache-from || '' }}
-          cache-to: ${{ steps.ecr-config.outputs.ecr-cache-to || '' }}
+            test-pnpm-cache:latest
+          # outputs: type=docker,dest=/tmp/test-image.tar
 
       - name: Extract cache from Docker
         uses: reproducible-containers/buildkit-cache-dance@v3
