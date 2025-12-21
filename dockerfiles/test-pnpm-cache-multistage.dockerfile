@@ -28,15 +28,15 @@ COPY apps/*/package.json ./apps/
 # fetch로 먼저 다운로드만 하고, offline 모드로 설치하여 속도 향상
 # --ignore-scripts: husky 등 prepare 스크립트 실행 방지 (Docker에서는 불필요)
 # 
-# ❌ 실패 시나리오 테스트: installer 스테이지에서 다른 id를 사용하여 캐시를 분리
+# ❌ 실패 시나리오 테스트: installer 스테이지에서 다른 경로에 캐시를 마운트
 # buildkit-cache-dance가 Extract할 때 /pnpm을 찾을 수 없음
-# ⚠️ 주의: 다른 id를 사용하여 캐시를 분리하여 실패 시나리오를 재현
-RUN --mount=type=cache,target=/pnpm,id=installer-cache \
-    echo "=== INSTALLER STAGE: Using DIFFERENT cache ID (installer-cache) ===" && \
-    echo "⚠️ Using id=installer-cache instead of id=pnpm-store" && \
-    echo "❌ This cache will NOT be extracted by buildkit-cache-dance" && \
+# ⚠️ 주의: 다른 경로(/pnpm-cache)에 캐시를 마운트하여 실패 시나리오를 재현
+RUN --mount=type=cache,target=/pnpm-cache,id=installer-cache \
+    echo "=== INSTALLER STAGE: Using DIFFERENT cache PATH (/pnpm-cache) ===" && \
+    echo "⚠️ Using target=/pnpm-cache instead of target=/pnpm" && \
+    echo "❌ buildkit-cache-dance looks for /pnpm, but cache is at /pnpm-cache" && \
     echo "PNPM_HOME: $PNPM_HOME" && \
-    pnpm config set store-dir ${PNPM_HOME} && \
+    pnpm config set store-dir /pnpm-cache && \
     echo "=== Starting pnpm fetch and install ===" && \
     pnpm fetch && \
     pnpm install --offline --frozen-lockfile --ignore-scripts 2>&1 | grep -E "(reused|Progress:|Done)" && \
@@ -48,7 +48,7 @@ RUN --mount=type=cache,target=/pnpm,id=installer-cache \
       du -sh "$(pnpm store path)" && \
       find "$(pnpm store path)" -type f 2>/dev/null | wc -l | xargs echo "Total files in store:"; \
     fi && \
-    echo "❌ This cache uses id=installer-cache, so buildkit-cache-dance will extract an empty cache"
+    echo "❌ This cache is at /pnpm-cache, so buildkit-cache-dance will extract an empty cache from /pnpm"
 
 # ===== BUILDER STAGE =====
 FROM installer AS builder
