@@ -68,19 +68,32 @@ jobs:
           done
 
       - name: Collect stats.json files
+        id: collect-stats
         run: |
           mkdir -p bundle-stats
+          has_files=false
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             app_name=$(basename $app)
             if [ -f "$app/.next/stats.json" ]; then
               cp "$app/.next/stats.json" "bundle-stats/${app_name}-stats.json"
               echo "Saved stats for $app_name"
+              has_files=true
             else
               echo "Warning: stats.json not found for $app_name at $app/.next/stats.json"
             fi
           done
+          
+          if [ "$has_files" = "true" ]; then
+            echo "has_stats=true" >> $GITHUB_OUTPUT
+            echo "Stats files collected:"
+            ls -la bundle-stats/
+          else
+            echo "has_stats=false" >> $GITHUB_OUTPUT
+            echo "No stats files to upload"
+          fi
 
       - name: Upload stats artifacts
+        if: steps.collect-stats.outputs.has_stats == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: bundle-stats-main
