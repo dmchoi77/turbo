@@ -278,7 +278,7 @@ jobs:
 
           echo "Main stats files:"
           ls -la main-stats/ || echo "No stats files found"
-          
+
           # Check if any stats were collected
           if [ ! -d "main-stats" ] || [ -z "$(ls -A main-stats 2>/dev/null)" ]; then
             echo "⚠️ Warning: No stats files collected from main branch build"
@@ -437,13 +437,37 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const commentBody = `${{ steps.compare.outputs.comparison }}`.trim();
-            const existingCommentId = `${{ steps.find-comment.outputs.result }}`.trim();
+            const fs = require('fs');
+            
+            // Read comparison from file to avoid YAML/JavaScript escaping issues
+            let commentBody = '';
+            try {
+              const comparisonFiles = fs.readdirSync('comparison-results');
+              for (const file of comparisonFiles) {
+                if (file.endsWith('.md')) {
+                  const content = fs.readFileSync(`comparison-results/${file}`, 'utf-8');
+                  if (commentBody) {
+                    commentBody += '\n\n---\n\n' + content;
+                  } else {
+                    commentBody = content;
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('Error reading comparison files:', error.message);
+              // Fallback to output if file reading fails
+              const output = '${{ steps.compare.outputs.comparison }}';
+              if (output && output.trim()) {
+                commentBody = output.trim();
+              }
+            }
 
-            if (!commentBody) {
+            if (!commentBody || !commentBody.trim()) {
               console.log('No comment body to post');
               return;
             }
+
+            const existingCommentId = '${{ steps.find-comment.outputs.result }}'.trim();
 
             if (existingCommentId) {
               await github.rest.issues.updateComment({
