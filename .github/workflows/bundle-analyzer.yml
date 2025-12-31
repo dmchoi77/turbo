@@ -108,53 +108,34 @@ jobs:
         id: changed-apps
         run: |
           git fetch origin ${{ github.base_ref }}:origin/${{ github.base_ref }} || true
-
-          # Debug: Show changed files
-          echo "=== Changed files ==="
-          git diff --name-only origin/${{ github.base_ref }}...HEAD || true
-          echo "===================="
-
-          # Check which Next.js apps have changes using git diff
+          
           CHANGED_APPS=""
-
-          # Check apps/web
+          
           if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^apps/web/"; then
             CHANGED_APPS="apps/web"
-            echo "✓ apps/web has changes"
-          else
-            echo "✗ apps/web has no changes"
           fi
-
-          # Check apps/docs
+          
           if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^apps/docs/"; then
             if [ -n "$CHANGED_APPS" ]; then
               CHANGED_APPS="$CHANGED_APPS apps/docs"
             else
               CHANGED_APPS="apps/docs"
             fi
-            echo "✓ apps/docs has changes"
-          else
-            echo "✗ apps/docs has no changes"
           fi
-
-          # Also try turbo list as fallback
+          
           if [ -z "$CHANGED_APPS" ]; then
-            echo "Trying turbo list as fallback..."
-            TURBO_APPS=$(turbo list --filter="[origin/${{ github.base_ref }}]..." --json 2>/dev/null | jq -r '.[] | select(.task == "build") | .package' | grep -E "^(apps/docs|apps/web)$" || true)
+            TURBO_APPS=$(pnpm turbo list --filter="[origin/${{ github.base_ref }}]..." --json 2>/dev/null | jq -r '.[] | select(.task == "build") | .package' | grep -E "^(apps/docs|apps/web)$" || true)
             if [ -n "$TURBO_APPS" ]; then
               CHANGED_APPS="$TURBO_APPS"
-              echo "Found apps via turbo list: $CHANGED_APPS"
             fi
           fi
-
+          
           if [ -z "$CHANGED_APPS" ]; then
-            echo "No Next.js apps changed, skipping..."
             echo "apps=" >> $GITHUB_OUTPUT
             exit 0
           fi
-
+          
           echo "apps=$CHANGED_APPS" >> $GITHUB_OUTPUT
-          echo "Final changed apps: $CHANGED_APPS"
 
       - name: Check if any apps changed
         if: steps.changed-apps.outputs.apps == ''
@@ -170,38 +151,25 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             try {
-              // Get the latest successful workflow run on main branch
-              // This will always get the most recent artifact, so if main branch
-              // was updated, we'll get the new artifact automatically
               const { data: runs } = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: 'bundle-analyzer.yml',
                 branch: '${{ github.base_ref }}',
                 status: 'success',
-                per_page: 1, // Get only the latest one
+                per_page: 1,
               });
               
               if (runs.workflow_runs.length === 0) {
                 core.setOutput('run_id', '');
                 core.setOutput('has_artifact', 'false');
-                console.log('No successful workflow run found on main branch');
-                console.log('Will build main branch to generate stats');
               } else {
-                const run = runs.workflow_runs[0];
-                const runId = run.id;
-                const runDate = new Date(run.created_at).toISOString();
-                core.setOutput('run_id', runId);
+                core.setOutput('run_id', runs.workflow_runs[0].id);
                 core.setOutput('has_artifact', 'true');
-                console.log(`Found latest main branch workflow run: ${runId}`);
-                console.log(`Run created at: ${runDate}`);
-                console.log(`Commit: ${run.head_sha.substring(0, 7)}`);
               }
             } catch (error) {
               core.setOutput('run_id', '');
               core.setOutput('has_artifact', 'false');
-              console.log('Error finding workflow run:', error.message);
-              console.log('Will build main branch to generate stats');
             }
 
       - name: Download main branch stats
@@ -220,64 +188,45 @@ jobs:
         run: |
           if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
             echo "has_main_stats=true" >> $GITHUB_OUTPUT
-            echo "Main stats found from artifact:"
-            ls -la main-stats/
           else
             echo "has_main_stats=false" >> $GITHUB_OUTPUT
-            echo "Main stats not available from artifact - will build main branch"
             mkdir -p main-stats
           fi
 
       - name: Build main branch for comparison
         if: steps.check-stats.outputs.has_main_stats != 'true'
         run: |
-          echo "Building main branch to generate stats for comparison..."
-
-          # Save current branch/commit
           CURRENT_REF=$(git rev-parse HEAD)
-          echo "Current ref: $CURRENT_REF"
-
-          # Fetch main branch
           git fetch origin ${{ github.base_ref }} --depth=1
-
-          # Checkout main branch using FETCH_HEAD to avoid ambiguity
           git checkout -b temp-main-branch FETCH_HEAD
-
-          # Install dependencies
           pnpm install --frozen-lockfile
-
-          # Build changed apps with analysis using pnpm turbo
+          
           for app in ${{ steps.changed-apps.outputs.apps }}; do
-            echo "Building $app on main branch..."
-            ANALYZE=true pnpm turbo build --filter="$app" --env-mode=strict
+            if [ ! -d "$app" ]; then
+              continue
+            fi
+            app_name=$(basename $app)
+            ANALYZE=true pnpm turbo build --filter="./$app" --env-mode=strict || \
+            ANALYZE=true pnpm turbo build --filter="$app_name" --env-mode=strict || true
           done
-
-          # Collect stats.json files
+          
           mkdir -p main-stats
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             app_name=$(basename $app)
-            if [ -f "$app/.next/stats.json" ]; then
+            if [ -d "$app" ] && [ -f "$app/.next/stats.json" ]; then
               cp "$app/.next/stats.json" "main-stats/${app_name}-stats.json"
-              echo "Saved main branch stats for $app_name"
-            else
-              echo "Warning: stats.json not found for $app_name on main branch at $app/.next/stats.json"
             fi
           done
-
-          # Go back to PR branch
+          
           git checkout $CURRENT_REF
-          echo "Returned to PR branch"
 
       - name: Verify main stats
         id: verify-stats
         run: |
           if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
             echo "has_main_stats=true" >> $GITHUB_OUTPUT
-            echo "Main stats available:"
-            ls -la main-stats/
           else
             echo "has_main_stats=false" >> $GITHUB_OUTPUT
-            echo "Main stats still not available"
           fi
 
       - name: Build PR branch with analysis
