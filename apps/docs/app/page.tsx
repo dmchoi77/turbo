@@ -1,6 +1,59 @@
+"use client";
+
 import Image, { type ImageProps } from "next/image";
 import { Button } from "@repo/ui/button";
+import _ from "lodash";
+import moment from "moment";
 import styles from "./page.module.css";
+
+// Large data array to increase bundle size
+const largeDataArray = Array.from({ length: 10000 }, (_, i) => ({
+  id: i,
+  name: `Item ${i}`,
+  description: `This is a description for item ${i}`,
+  timestamp: Date.now() + i,
+  metadata: {
+    category: `Category ${i % 10}`,
+    tags: Array.from({ length: 5 }, (_, j) => `tag-${i}-${j}`),
+    data: new Array(100).fill(0).map((_, k) => `data-${i}-${k}`),
+  },
+}));
+
+// Utility functions using lodash to ensure it's included in bundle
+const processData = () => {
+  const grouped = _.groupBy(largeDataArray, (item) => item.metadata.category);
+  const sorted = _.sortBy(largeDataArray, ["id"]);
+  const chunked = _.chunk(largeDataArray, 100);
+  const flattened = _.flattenDeep(chunked);
+  const unique = _.uniqBy(largeDataArray, "id");
+  const shuffled = _.shuffle(largeDataArray.slice(0, 1000));
+  const debounced = _.debounce(() => {}, 100);
+  const throttled = _.throttle(() => {}, 100);
+  const memoized = _.memoize((n: number) => n * 2);
+
+  // Use more lodash functions to increase bundle size
+  const mapped = _.map(largeDataArray, (item) => ({
+    ...item,
+    processed: true,
+  }));
+  const filtered = _.filter(mapped, (item) => item.id % 2 === 0);
+  const reduced = _.reduce(filtered, (acc, item) => acc + item.id, 0);
+
+  return {
+    grouped,
+    sorted,
+    chunked,
+    flattened,
+    unique,
+    shuffled,
+    debounced,
+    throttled,
+    memoized,
+    mapped,
+    filtered,
+    reduced,
+  };
+};
 
 type Props = Omit<ImageProps, "src"> & {
   srcLight: string;
@@ -36,6 +89,10 @@ export default function Home() {
             Get started by editing <code>apps/docs/app/page.tsx</code>
           </li>
           <li>Save and see your changes instantly.</li>
+          <li>Current time: {currentTime}</li>
+          <li>
+            Processed {Object.keys(processedData.grouped).length} categories
+          </li>
         </ol>
 
         <div className={styles.ctas}>
