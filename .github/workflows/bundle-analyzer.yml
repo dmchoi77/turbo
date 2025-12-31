@@ -42,19 +42,40 @@ jobs:
         run: |
           # Get the previous commit to compare against
           PREV_SHA=$(git rev-parse HEAD^1 2>/dev/null || echo "")
+          CHANGED_APPS=""
+          
           if [ -n "$PREV_SHA" ]; then
-            CHANGED_APPS=$(turbo list --filter="[${PREV_SHA}]..." --json | jq -r '.[] | select(.task == "build") | .package' | grep -E "^(apps/docs|apps/web)$" || true)
-          else
-            # If no previous commit, check all Next.js apps
+            CHANGED_APPS=$(pnpm turbo list --filter="[${PREV_SHA}]..." --json 2>/dev/null | jq -r '.[] | select(.task == "build") | .package' | grep -E "^(apps/docs|apps/web)$" || true)
+          fi
+          
+          # If no changes detected or turbo list failed, check all Next.js apps
+          if [ -z "$CHANGED_APPS" ]; then
+            echo "No changes detected or first build - building all Next.js apps"
             CHANGED_APPS="apps/docs apps/web"
           fi
-          if [ -z "$CHANGED_APPS" ]; then
-            echo "No Next.js apps changed, skipping..."
+          
+          # Filter out apps that don't exist
+          EXISTING_APPS=""
+          for app in $CHANGED_APPS; do
+            if [ -d "$app" ]; then
+              if [ -z "$EXISTING_APPS" ]; then
+                EXISTING_APPS="$app"
+              else
+                EXISTING_APPS="$EXISTING_APPS $app"
+              fi
+            else
+              echo "Skipping $app - directory does not exist"
+            fi
+          done
+          
+          if [ -z "$EXISTING_APPS" ]; then
+            echo "No Next.js apps found, skipping..."
             echo "apps=" >> $GITHUB_OUTPUT
             exit 0
           fi
-          echo "apps=$CHANGED_APPS" >> $GITHUB_OUTPUT
-          echo "Changed apps: $CHANGED_APPS"
+          
+          echo "apps=$EXISTING_APPS" >> $GITHUB_OUTPUT
+          echo "Changed apps: $EXISTING_APPS"
 
       - name: Build with analysis
         env:
@@ -82,23 +103,25 @@ jobs:
               echo "Warning: stats.json not found for $app_name at $app/.next/stats.json"
             fi
           done
-          
+
           if [ "$has_files" = "true" ]; then
             echo "has_stats=true" >> $GITHUB_OUTPUT
             echo "Stats files collected:"
             ls -la bundle-stats/
           else
             echo "has_stats=false" >> $GITHUB_OUTPUT
-            echo "No stats files to upload"
+            echo "No stats files to cache"
           fi
 
-      - name: Upload stats artifacts
+      - name: Cache main branch stats
         if: steps.collect-stats.outputs.has_stats == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/cache@v4
         with:
-          name: bundle-stats-main
-          path: bundle-stats/*.json
-          retention-days: 30
+          path: bundle-stats/
+          key: bundle-stats-main-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            bundle-stats-main-${{ github.ref_name }}-
+            bundle-stats-main-
 
   # Job 2: PR - Compare and comment
   compare-bundles:
@@ -165,57 +188,25 @@ jobs:
           echo "No Next.js apps changed, exiting..."
           exit 0
 
-      - name: Find main branch workflow run
-        id: find-run
-        uses: actions/github-script@v7
-        continue-on-error: true
+      - name: Restore main branch stats from cache
+        id: cache-main-stats
+        uses: actions/cache@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            try {
-              const { data: runs } = await github.rest.actions.listWorkflowRuns({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'bundle-analyzer.yml',
-                branch: '${{ github.base_ref }}',
-                status: 'success',
-                per_page: 1,
-              });
-              
-              if (runs.workflow_runs.length === 0) {
-                core.setOutput('run_id', '');
-                core.setOutput('has_artifact', 'false');
-              } else {
-                core.setOutput('run_id', runs.workflow_runs[0].id);
-                core.setOutput('has_artifact', 'true');
-              }
-            } catch (error) {
-              core.setOutput('run_id', '');
-              core.setOutput('has_artifact', 'false');
-            }
-
-      - name: Download main branch stats
-        id: download-stats
-        if: steps.find-run.outputs.has_artifact == 'true'
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: bundle-stats-main
           path: main-stats
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.find-run.outputs.run_id }}
-        env:
-          ACTIONS_STEP_DEBUG: false
+          key: bundle-stats-main-${{ github.base_ref }}
+          restore-keys: |
+            bundle-stats-main-
 
-      - name: Check if main stats downloaded
+      - name: Check if main stats cached
         id: check-stats
         run: |
           if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
             echo "has_main_stats=true" >> $GITHUB_OUTPUT
-            echo "✓ Main branch stats found from artifact"
+            echo "✓ Main branch stats found from cache"
+            ls -la main-stats/
           else
             echo "has_main_stats=false" >> $GITHUB_OUTPUT
-            echo "ℹ Main branch stats not found - will build main branch for comparison"
+            echo "ℹ Main branch stats not found in cache - will build main branch for comparison"
             mkdir -p main-stats
           fi
 
