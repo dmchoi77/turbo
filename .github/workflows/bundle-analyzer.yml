@@ -55,7 +55,9 @@ jobs:
         run: |
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
-            pnpm turbo build --filter="$app" --env-mode=strict
+            app_name=$(basename $app)
+            pnpm turbo build --filter="./$app" --env-mode=strict || \
+            pnpm turbo build --filter="$app_name" --env-mode=strict
           done
 
       - name: Collect stats.json files
@@ -182,14 +184,18 @@ jobs:
           path: main-stats
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ steps.find-run.outputs.run_id }}
+        env:
+          ACTIONS_STEP_DEBUG: false
 
       - name: Check if main stats downloaded
         id: check-stats
         run: |
           if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
             echo "has_main_stats=true" >> $GITHUB_OUTPUT
+            echo "✓ Main branch stats found from artifact"
           else
             echo "has_main_stats=false" >> $GITHUB_OUTPUT
+            echo "ℹ Main branch stats not found - will build main branch for comparison"
             mkdir -p main-stats
           fi
 
@@ -235,7 +241,9 @@ jobs:
         run: |
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
-            pnpm turbo build --filter="$app" --env-mode=strict
+            app_name=$(basename $app)
+            pnpm turbo build --filter="./$app" --env-mode=strict || \
+            pnpm turbo build --filter="$app_name" --env-mode=strict
           done
 
       - name: Compare bundles and generate report
