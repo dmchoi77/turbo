@@ -55,7 +55,7 @@ jobs:
         run: |
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
-            turbo build --filter="$app" --env-mode=strict
+            pnpm turbo build --filter="$app" --env-mode=strict
           done
 
       - name: Collect stats.json files
@@ -237,17 +237,19 @@ jobs:
           CURRENT_REF=$(git rev-parse HEAD)
           echo "Current ref: $CURRENT_REF"
 
-          # Fetch and checkout main branch
-          git fetch origin ${{ github.base_ref }}:origin/${{ github.base_ref }} --depth=1
-          git checkout origin/${{ github.base_ref }}
+          # Fetch main branch
+          git fetch origin ${{ github.base_ref }} --depth=1
+
+          # Checkout main branch using FETCH_HEAD to avoid ambiguity
+          git checkout -b temp-main-branch FETCH_HEAD
 
           # Install dependencies
           pnpm install --frozen-lockfile
 
-          # Build changed apps with analysis
+          # Build changed apps with analysis using pnpm turbo
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app on main branch..."
-            ANALYZE=true turbo build --filter="$app" --env-mode=strict
+            ANALYZE=true pnpm turbo build --filter="$app" --env-mode=strict
           done
 
           # Collect stats.json files
@@ -284,7 +286,7 @@ jobs:
         run: |
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
-            turbo build --filter="$app" --env-mode=strict
+            pnpm turbo build --filter="$app" --env-mode=strict
           done
 
       - name: Compare bundles and generate report
