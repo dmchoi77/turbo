@@ -54,12 +54,15 @@ function getChunkComparisonKey(chunk) {
         return "pages/_app";
       }
       // Route-based chunks (app/page, app/layout, etc.)
-      if (name.includes("/") && (name.includes("page") || name.includes("layout"))) {
+      if (
+        name.includes("/") &&
+        (name.includes("page") || name.includes("layout"))
+      ) {
         return name;
       }
     }
   }
-  
+
   // For hash-based chunks, use a normalized identifier
   // Extract meaningful part before hash
   if (chunk.names && chunk.names.length > 0) {
@@ -76,7 +79,7 @@ function getChunkComparisonKey(chunk) {
       }
     }
   }
-  
+
   // Fallback to chunk id
   return `chunk-${chunk.id}`;
 }
@@ -87,17 +90,22 @@ function getChunkComparisonKey(chunk) {
 function getChunkDisplayName(chunk) {
   const comparisonKey = getChunkComparisonKey(chunk);
   const hash = extractHash(chunk);
-  
+
   // For special chunks, keep the name as is
-  if (comparisonKey === "framework" || comparisonKey === "main" || comparisonKey.startsWith("pages/") || comparisonKey.startsWith("app/")) {
+  if (
+    comparisonKey === "framework" ||
+    comparisonKey === "main" ||
+    comparisonKey.startsWith("pages/") ||
+    comparisonKey.startsWith("app/")
+  ) {
     return comparisonKey;
   }
-  
+
   // For hash-based chunks, append hash
   if (hash) {
     return `${comparisonKey}-${hash}`;
   }
-  
+
   return comparisonKey;
 }
 
@@ -196,9 +204,13 @@ function compareBundles(mainStatsPath, prStatsPath) {
 
     // Determine display name: prefer route, then displayName with hash, then comparisonKey
     let displayName = chunkKey;
-    
+
     // For special chunks (framework, main, pages/_app), use the key as-is
-    if (chunkKey === "framework" || chunkKey === "main" || chunkKey.startsWith("pages/")) {
+    if (
+      chunkKey === "framework" ||
+      chunkKey === "main" ||
+      chunkKey.startsWith("pages/")
+    ) {
       displayName = chunkKey;
     } else {
       // For other chunks, prefer route, then displayName with hash
@@ -234,10 +246,19 @@ function compareBundles(mainStatsPath, prStatsPath) {
   markdown += "|------------|--------|-------|------|-------|\n";
 
   for (const comp of comparisons) {
-    const diffStr =
-      comp.diffPercent !== "N/A"
-        ? `${comp.diff > 0 ? "+" : ""}${formatBytes(comp.diff)} (${comp.diffPercent > 0 ? "+" : ""}${comp.diffPercent}%)`
-        : "N/A";
+    let diffStr;
+    if (comp.diffPercent === "N/A") {
+      // New chunk (before = 0) or removed chunk (after = 0)
+      if (comp.before === 0 && comp.after > 0) {
+        diffStr = `+${formatBytes(comp.diff)} (new)`;
+      } else if (comp.before > 0 && comp.after === 0) {
+        diffStr = `${formatBytes(comp.diff)} (removed)`;
+      } else {
+        diffStr = "N/A";
+      }
+    } else {
+      diffStr = `${comp.diff > 0 ? "+" : ""}${formatBytes(comp.diff)} (${comp.diffPercent > 0 ? "+" : ""}${comp.diffPercent}%)`;
+    }
     markdown += `| ${comp.name} | ${formatBytes(comp.before)} | ${formatBytes(comp.after)} | ${diffStr} | ${comp.trend} |\n`;
   }
 
