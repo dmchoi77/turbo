@@ -242,7 +242,7 @@ jobs:
 
           echo "Main stats files:"
           ls -la main-stats/ || echo "No stats files found"
-          
+
           git checkout $CURRENT_REF
 
       - name: Verify main stats
@@ -273,7 +273,7 @@ jobs:
         run: |
           mkdir -p comparison-results
           all_comparisons=""
-          has_main_stats=${{ steps.check-stats.outputs.has_main_stats }}
+          has_main_stats=${{ steps.verify-stats.outputs.has_main_stats }}
 
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             app_name=$(basename $app)
