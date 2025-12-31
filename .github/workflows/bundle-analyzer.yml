@@ -148,10 +148,13 @@ jobs:
           # Copy from bundle-stats to main-stats for consistency
           mkdir -p main-stats
           if [ -d "bundle-stats" ] && [ "$(ls -A bundle-stats 2>/dev/null)" ]; then
+            echo "Found bundle-stats directory with files:"
+            ls -la bundle-stats/
             cp bundle-stats/*.json main-stats/ 2>/dev/null || true
+            echo "Copied to main-stats:"
+            ls -la main-stats/
             echo "has_main_stats=true" >> $GITHUB_OUTPUT
             echo "✓ Main branch stats found from cache"
-            ls -la main-stats/
           else
             echo "has_main_stats=false" >> $GITHUB_OUTPUT
             echo "ℹ Main branch stats not found in cache - will build main branch for comparison"
@@ -168,7 +171,7 @@ jobs:
           # Copy from main-stats to bundle-stats for caching
           mkdir -p bundle-stats
           cp main-stats/*.json bundle-stats/ 2>/dev/null || true
-          
+
       - name: Save main branch stats to cache (if built)
         if: steps.check-stats.outputs.has_main_stats != 'true'
         uses: actions/cache@v4

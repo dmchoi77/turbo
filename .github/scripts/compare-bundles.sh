@@ -23,6 +23,18 @@ for app in $CHANGED_APPS; do
   echo "  PR stats path: $pr_stats"
   echo "  Main stats path: $main_stats"
   
+  # Debug: Check if files exist and show their sizes
+  if [ -f "$main_stats" ]; then
+    echo "  ✓ Main stats file exists: $(ls -lh "$main_stats" | awk '{print $5}')"
+  else
+    echo "  ✗ Main stats file NOT found: $main_stats"
+  fi
+  if [ -f "$pr_stats" ]; then
+    echo "  ✓ PR stats file exists: $(ls -lh "$pr_stats" | awk '{print $5}')"
+  else
+    echo "  ✗ PR stats file NOT found: $pr_stats"
+  fi
+  
   if [ ! -f "$pr_stats" ]; then
     echo "  ✗ PR stats not found for $app_name at $pr_stats, skipping"
     continue

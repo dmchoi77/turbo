@@ -34,6 +34,10 @@ for app in $CHANGED_APPS; do
   if [ -f "$app/.next/stats.json" ]; then
     cp "$app/.next/stats.json" "main-stats/${app_name}-stats.json"
     echo "✓ Copied stats.json for $app_name"
+    echo "  File size: $(ls -lh "main-stats/${app_name}-stats.json" | awk '{print $5}')"
+    # Verify the file is different for each app by checking first few lines
+    echo "  First chunk names in stats:"
+    node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('main-stats/${app_name}-stats.json','utf-8')); console.log(s.chunks?.slice(0,3).map(c=>c.names?.[0]||'no-name').join(', ') || 'no chunks');" 2>/dev/null || echo "  Could not parse stats"
   else
     echo "✗ stats.json not found for $app_name"
     echo "  Checking $app/.next/ directory:"
