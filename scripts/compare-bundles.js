@@ -196,19 +196,26 @@ function compareBundles(mainStatsPath, prStatsPath) {
 
     // Determine display name: prefer route, then displayName with hash, then comparisonKey
     let displayName = chunkKey;
-    if (mainChunk) {
-      displayName = mainChunk.route || mainChunk.displayName || chunkKey;
-    } else if (prChunk) {
-      displayName = prChunk.route || prChunk.displayName || chunkKey;
-    }
+    
+    // For special chunks (framework, main, pages/_app), use the key as-is
+    if (chunkKey === "framework" || chunkKey === "main" || chunkKey.startsWith("pages/")) {
+      displayName = chunkKey;
+    } else {
+      // For other chunks, prefer route, then displayName with hash
+      if (mainChunk) {
+        displayName = mainChunk.route || mainChunk.displayName || chunkKey;
+      } else if (prChunk) {
+        displayName = prChunk.route || prChunk.displayName || chunkKey;
+      }
 
-    // For hash-based chunks, show hash from both if different
-    if (mainChunk?.hash && prChunk?.hash && mainChunk.hash !== prChunk.hash) {
-      displayName = `${chunkKey} (${mainChunk.hash}→${prChunk.hash})`;
-    } else if (mainChunk?.hash) {
-      displayName = `${chunkKey}-${mainChunk.hash}`;
-    } else if (prChunk?.hash) {
-      displayName = `${chunkKey}-${prChunk.hash}`;
+      // For hash-based chunks, show hash from both if different
+      if (mainChunk?.hash && prChunk?.hash && mainChunk.hash !== prChunk.hash) {
+        displayName = `${chunkKey}-${mainChunk.hash}→${prChunk.hash}`;
+      } else if (mainChunk?.hash) {
+        displayName = `${chunkKey}-${mainChunk.hash}`;
+      } else if (prChunk?.hash) {
+        displayName = `${chunkKey}-${prChunk.hash}`;
+      }
     }
 
     comparisons.push({
