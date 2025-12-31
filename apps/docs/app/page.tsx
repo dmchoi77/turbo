@@ -72,6 +72,10 @@ const ThemeImage = (props: Props) => {
 };
 
 export default function Home() {
+  // Process data to ensure lodash is included in bundle
+  const processedData = processData();
+  const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
