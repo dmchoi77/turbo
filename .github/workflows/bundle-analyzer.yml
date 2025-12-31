@@ -204,7 +204,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            ${{ github.workspace }}/.github/scripts/find-comment.js
+            const fs = require('fs');
+            const script = fs.readFileSync('.github/scripts/find-comment.js', 'utf-8');
+            eval(script);
 
       - name: Create or update PR comment
         if: steps.compare.outputs.has_comparison == 'true'
@@ -214,4 +216,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            ${{ github.workspace }}/.github/scripts/post-comment.js
+            const fs = require('fs');
+            const script = fs.readFileSync('.github/scripts/post-comment.js', 'utf-8');
+            eval(script);
