@@ -360,14 +360,19 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const commentBody = `${{ steps.compare.outputs.comparison }}`;
-            const existingCommentId = ${{ steps.find-comment.outputs.result }};
+            const commentBody = `${{ steps.compare.outputs.comparison }}`.trim();
+            const existingCommentId = `${{ steps.find-comment.outputs.result }}`.trim();
+
+            if (!commentBody) {
+              console.log('No comment body to post');
+              return;
+            }
 
             if (existingCommentId) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                comment_id: existingCommentId,
+                comment_id: parseInt(existingCommentId),
                 body: commentBody,
               });
               console.log('Updated existing comment');
