@@ -80,8 +80,44 @@ function getChunkComparisonKey(chunk) {
     }
   }
 
-  // Fallback to chunk id
-  return `chunk-${chunk.id}`;
+  // Try to extract identifier from files
+  if (chunk.files && chunk.files.length > 0) {
+    for (const file of chunk.files) {
+      // Extract chunk name from file path (e.g., "static/chunks/3089687a-xxx.js" -> "3089687a")
+      const fileMatch = file.match(/chunks\/([a-f0-9]{8})/i);
+      if (fileMatch) {
+        return fileMatch[1];
+      }
+      // Try to extract from filename
+      const filenameMatch = file.match(/([^/]+)\.js$/);
+      if (filenameMatch) {
+        const filename = filenameMatch[1];
+        // Remove hash suffix if present
+        const withoutHash = filename.replace(/-[a-f0-9]{8,}$/i, "");
+        if (withoutHash && withoutHash !== filename) {
+          return withoutHash;
+        }
+        // Use first 8 chars if it's a hash
+        const hashMatch = filename.match(/^([a-f0-9]{8})/i);
+        if (hashMatch) {
+          return hashMatch[1];
+        }
+      }
+    }
+  }
+
+  // Use hash if available
+  if (chunk.hash) {
+    return chunk.hash.substring(0, 8);
+  }
+
+  // Fallback to chunk id (if defined) or generate from hash
+  if (chunk.id !== undefined) {
+    return `chunk-${chunk.id}`;
+  }
+
+  // Last resort: use a generic identifier
+  return "chunk-unknown";
 }
 
 /**
@@ -252,7 +288,11 @@ function compareBundles(mainStatsPath, prStatsPath) {
     const name = comp.name.toLowerCase();
     if (name === "framework" || name.includes("framework")) {
       frameworkChunks.push(comp);
-    } else if (name === "main" || name === "main-app" || name.startsWith("pages/_app")) {
+    } else if (
+      name === "main" ||
+      name === "main-app" ||
+      name.startsWith("pages/_app")
+    ) {
       appChunks.push(comp);
     } else if (name.startsWith("app/") || name.startsWith("pages/")) {
       pageChunks.push(comp);
@@ -311,7 +351,7 @@ function compareBundles(mainStatsPath, prStatsPath) {
     markdown += "### 🔧 Core Chunks\n\n";
     markdown += "| Chunk | Before | After | Change |\n";
     markdown += "|-------|--------|-------|--------|\n";
-    
+
     for (const comp of [...frameworkChunks, ...appChunks]) {
       const diffStr = formatDiff(comp);
       markdown += `| **${comp.name}** | ${formatBytes(comp.before)} | ${formatBytes(comp.after)} | ${diffStr} ${comp.trend} |\n`;
@@ -324,7 +364,7 @@ function compareBundles(mainStatsPath, prStatsPath) {
     markdown += "### 📄 Page Chunks\n\n";
     markdown += "| Route | Before | After | Change |\n";
     markdown += "|-------|--------|-------|--------|\n";
-    
+
     for (const comp of pageChunks) {
       const diffStr = formatDiff(comp);
       markdown += `| \`${comp.name}\` | ${formatBytes(comp.before)} | ${formatBytes(comp.after)} | ${diffStr} ${comp.trend} |\n`;
@@ -337,7 +377,7 @@ function compareBundles(mainStatsPath, prStatsPath) {
     markdown += "### 🆕 New Chunks\n\n";
     markdown += "| Chunk | Size |\n";
     markdown += "|-------|------|\n";
-    
+
     for (const comp of newChunks) {
       markdown += `| \`${comp.name}\` | ${formatBytes(comp.after)} |\n`;
     }
@@ -349,7 +389,7 @@ function compareBundles(mainStatsPath, prStatsPath) {
     markdown += "### 🗑️ Removed Chunks\n\n";
     markdown += "| Chunk | Previous Size |\n";
     markdown += "|-------|---------------|\n";
-    
+
     for (const comp of removedChunks) {
       markdown += `| \`${comp.name}\` | ${formatBytes(comp.before)} |\n`;
     }
@@ -364,10 +404,10 @@ function compareBundles(mainStatsPath, prStatsPath) {
     markdown += "### 📦 Other Chunks\n\n";
     markdown += "| Chunk | Before | After | Change |\n";
     markdown += "|-------|--------|-------|--------|\n";
-    
+
     // Sort by absolute diff (largest changes first)
     significantOtherChunks.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
-    
+
     for (const comp of significantOtherChunks) {
       const diffStr = formatDiff(comp);
       markdown += `| \`${comp.name}\` | ${formatBytes(comp.before)} | ${formatBytes(comp.after)} | ${diffStr} ${comp.trend} |\n`;
