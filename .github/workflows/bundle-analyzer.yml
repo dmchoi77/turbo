@@ -154,10 +154,15 @@ jobs:
         run: |
           git fetch origin ${{ github.base_ref }}:origin/${{ github.base_ref }} || true
 
+          echo "=== Changed files ==="
+          git diff --name-only origin/${{ github.base_ref }}...HEAD || true
+          echo "===================="
+
           CHANGED_APPS=""
 
           if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^apps/web/"; then
             CHANGED_APPS="apps/web"
+            echo "✓ apps/web has changes"
           fi
 
           if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^apps/docs/"; then
@@ -166,21 +171,34 @@ jobs:
             else
               CHANGED_APPS="apps/docs"
             fi
+            echo "✓ apps/docs has changes"
           fi
 
+          # If no changes detected, check if apps exist and build all
           if [ -z "$CHANGED_APPS" ]; then
-            TURBO_APPS=$(pnpm turbo list --filter="[origin/${{ github.base_ref }}]..." --json 2>/dev/null | jq -r '.[] | select(.task == "build") | .package' | grep -E "^(apps/docs|apps/web)$" || true)
-            if [ -n "$TURBO_APPS" ]; then
-              CHANGED_APPS="$TURBO_APPS"
+            echo "No changes detected via git diff, checking if apps exist..."
+            if [ -d "apps/web" ]; then
+              CHANGED_APPS="apps/web"
+              echo "Building apps/web (no changes detected but app exists)"
+            fi
+            if [ -d "apps/docs" ]; then
+              if [ -n "$CHANGED_APPS" ]; then
+                CHANGED_APPS="$CHANGED_APPS apps/docs"
+              else
+                CHANGED_APPS="apps/docs"
+              fi
+              echo "Building apps/docs (no changes detected but app exists)"
             fi
           fi
 
           if [ -z "$CHANGED_APPS" ]; then
+            echo "No Next.js apps found, skipping..."
             echo "apps=" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           echo "apps=$CHANGED_APPS" >> $GITHUB_OUTPUT
+          echo "Final changed apps: $CHANGED_APPS"
 
       - name: Check if any apps changed
         if: steps.changed-apps.outputs.apps == ''
@@ -250,12 +268,21 @@ jobs:
               cp "$app/.next/stats.json" "main-stats/${app_name}-stats.json"
               echo "✓ Copied stats.json for $app_name"
             else
-              echo "✗ stats.json not found for $app_name at $app/.next/stats.json"
+              echo "✗ stats.json not found for $app_name"
+              echo "  Checking $app/.next/ directory:"
+              ls -la "$app/.next/" 2>/dev/null || echo "  .next directory does not exist"
+              echo "  Looking for stats.json in $app:"
+              find "$app" -name "stats.json" 2>/dev/null || echo "  No stats.json found"
             fi
           done
 
           echo "Main stats files:"
           ls -la main-stats/ || echo "No stats files found"
+          
+          # Check if any stats were collected
+          if [ ! -d "main-stats" ] || [ -z "$(ls -A main-stats 2>/dev/null)" ]; then
+            echo "⚠️ Warning: No stats files collected from main branch build"
+          fi
 
           git checkout $CURRENT_REF
 
@@ -297,7 +324,7 @@ jobs:
           mkdir -p comparison-results
           all_comparisons=""
           has_main_stats=${{ steps.verify-stats.outputs.has_main_stats }}
-          
+
           echo "=== Debug Info ==="
           echo "has_main_stats: $has_main_stats"
           echo "Changed apps: ${{ steps.changed-apps.outputs.apps }}"
