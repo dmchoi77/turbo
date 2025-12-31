@@ -240,29 +240,35 @@ function compareBundles(mainStatsPath, prStatsPath) {
     });
   }
 
-  // Generate markdown table
-  let markdown = "## 📦 Bundle Size Comparison\n\n";
-  markdown += "| Route/Chunk | Before | After | Diff | Trend |\n";
-  markdown += "|------------|--------|-------|------|-------|\n";
+  // Separate chunks by category
+  const frameworkChunks = [];
+  const appChunks = [];
+  const pageChunks = [];
+  const otherChunks = [];
+  const newChunks = [];
+  const removedChunks = [];
 
   for (const comp of comparisons) {
-    let diffStr;
-    if (comp.diffPercent === "N/A") {
-      // New chunk (before = 0) or removed chunk (after = 0)
-      if (comp.before === 0 && comp.after > 0) {
-        diffStr = `+${formatBytes(comp.diff)} (new)`;
-      } else if (comp.before > 0 && comp.after === 0) {
-        diffStr = `${formatBytes(comp.diff)} (removed)`;
-      } else {
-        diffStr = "N/A";
-      }
+    const name = comp.name.toLowerCase();
+    if (name === "framework" || name.includes("framework")) {
+      frameworkChunks.push(comp);
+    } else if (name === "main" || name === "main-app" || name.startsWith("pages/_app")) {
+      appChunks.push(comp);
+    } else if (name.startsWith("app/") || name.startsWith("pages/")) {
+      pageChunks.push(comp);
+    } else if (comp.before === 0 && comp.after > 0) {
+      newChunks.push(comp);
+    } else if (comp.before > 0 && comp.after === 0) {
+      removedChunks.push(comp);
     } else {
-      diffStr = `${comp.diff > 0 ? "+" : ""}${formatBytes(comp.diff)} (${comp.diffPercent > 0 ? "+" : ""}${comp.diffPercent}%)`;
+      otherChunks.push(comp);
     }
-    markdown += `| ${comp.name} | ${formatBytes(comp.before)} | ${formatBytes(comp.after)} | ${diffStr} | ${comp.trend} |\n`;
   }
 
-  // Add total row
+  // Generate markdown with better structure
+  let markdown = "## 📦 Bundle Size Comparison\n\n";
+
+  // Summary section
   const totalDiff = totalAfter - totalBefore;
   const totalDiffPercent =
     totalBefore > 0 ? ((totalDiff / totalBefore) * 100).toFixed(2) : "N/A";
@@ -272,7 +278,106 @@ function compareBundles(mainStatsPath, prStatsPath) {
       ? `${totalDiff > 0 ? "+" : ""}${formatBytes(totalDiff)} (${totalDiffPercent > 0 ? "+" : ""}${totalDiffPercent}%)`
       : "N/A";
 
-  markdown += `| **Total** | **${formatBytes(totalBefore)}** | **${formatBytes(totalAfter)}** | **${totalDiffStr}** | **${totalTrend}** |\n`;
+  markdown += "### 📊 Summary\n\n";
+  markdown += `| Metric | Value |\n`;
+  markdown += `|--------|-------|\n`;
+  markdown += `| **Total Size** | ${formatBytes(totalBefore)} → ${formatBytes(totalAfter)} |\n`;
+  markdown += `| **Change** | ${totalDiffStr} ${totalTrend} |\n`;
+  if (newChunks.length > 0) {
+    markdown += `| **New Chunks** | ${newChunks.length} added |\n`;
+  }
+  if (removedChunks.length > 0) {
+    markdown += `| **Removed Chunks** | ${removedChunks.length} removed |\n`;
+  }
+  markdown += "\n";
+
+  // Helper function to format diff
+  function formatDiff(comp) {
+    if (comp.diffPercent === "N/A") {
+      if (comp.before === 0 && comp.after > 0) {
+        return `**+${formatBytes(comp.diff)}** 🆕`;
+      } else if (comp.before > 0 && comp.after === 0) {
+        return `**${formatBytes(comp.diff)}** 🗑️`;
+      }
+      return "N/A";
+    }
+    const sign = comp.diff > 0 ? "+" : "";
+    const percentSign = comp.diffPercent > 0 ? "+" : "";
+    return `${sign}${formatBytes(comp.diff)} (${percentSign}${comp.diffPercent}%)`;
+  }
+
+  // Core chunks section
+  if (frameworkChunks.length > 0 || appChunks.length > 0) {
+    markdown += "### 🔧 Core Chunks\n\n";
+    markdown += "| Chunk | Before | After | Change |\n";
+    markdown += "|-------|--------|-------|--------|\n";
+    
+    for (const comp of [...frameworkChunks, ...appChunks]) {
+      const diffStr = formatDiff(comp);
+      markdown += `| **${comp.name}** | ${formatBytes(comp.before)} | ${formatBytes(comp.after)} | ${diffStr} ${comp.trend} |\n`;
+    }
+    markdown += "\n";
+  }
+
+  // Page chunks section
+  if (pageChunks.length > 0) {
+    markdown += "### 📄 Page Chunks\n\n";
+    markdown += "| Route | Before | After | Change |\n";
+    markdown += "|-------|--------|-------|--------|\n";
+    
+    for (const comp of pageChunks) {
+      const diffStr = formatDiff(comp);
+      markdown += `| \`${comp.name}\` | ${formatBytes(comp.before)} | ${formatBytes(comp.after)} | ${diffStr} ${comp.trend} |\n`;
+    }
+    markdown += "\n";
+  }
+
+  // New chunks section
+  if (newChunks.length > 0) {
+    markdown += "### 🆕 New Chunks\n\n";
+    markdown += "| Chunk | Size |\n";
+    markdown += "|-------|------|\n";
+    
+    for (const comp of newChunks) {
+      markdown += `| \`${comp.name}\` | ${formatBytes(comp.after)} |\n`;
+    }
+    markdown += "\n";
+  }
+
+  // Removed chunks section
+  if (removedChunks.length > 0) {
+    markdown += "### 🗑️ Removed Chunks\n\n";
+    markdown += "| Chunk | Previous Size |\n";
+    markdown += "|-------|---------------|\n";
+    
+    for (const comp of removedChunks) {
+      markdown += `| \`${comp.name}\` | ${formatBytes(comp.before)} |\n`;
+    }
+    markdown += "\n";
+  }
+
+  // Other chunks section (only if there are significant changes)
+  const significantOtherChunks = otherChunks.filter(
+    (comp) => comp.diff !== 0 || Math.abs(comp.diffPercent) > 1
+  );
+  if (significantOtherChunks.length > 0) {
+    markdown += "### 📦 Other Chunks\n\n";
+    markdown += "| Chunk | Before | After | Change |\n";
+    markdown += "|-------|--------|-------|--------|\n";
+    
+    // Sort by absolute diff (largest changes first)
+    significantOtherChunks.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+    
+    for (const comp of significantOtherChunks) {
+      const diffStr = formatDiff(comp);
+      markdown += `| \`${comp.name}\` | ${formatBytes(comp.before)} | ${formatBytes(comp.after)} | ${diffStr} ${comp.trend} |\n`;
+    }
+    markdown += "\n";
+  }
+
+  // Total row
+  markdown += "---\n\n";
+  markdown += `**Total Bundle Size:** ${formatBytes(totalBefore)} → **${formatBytes(totalAfter)}** (${totalDiffStr}) ${totalTrend}\n`;
 
   return markdown;
 }
