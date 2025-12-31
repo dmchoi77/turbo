@@ -24,8 +24,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'pnpm'
+          node-version: "18"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -51,7 +51,7 @@ jobs:
 
       - name: Build with analysis
         env:
-          ANALYZE: 'true'
+          ANALYZE: "true"
         run: |
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
@@ -98,8 +98,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'pnpm'
+          node-version: "18"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -133,7 +133,7 @@ jobs:
 
       - name: Build PR branch with analysis
         env:
-          ANALYZE: 'true'
+          ANALYZE: "true"
         run: |
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
@@ -145,7 +145,7 @@ jobs:
         run: |
           mkdir -p comparison-results
           all_comparisons=""
-          
+
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             app_name=$(basename $app)
             main_stats="main-stats/${app_name}-stats.json"
@@ -171,7 +171,7 @@ jobs:
               all_comparisons="$all_comparisons\n\n---\n\n$comparison"
             fi
           done
-          
+
           if [ -z "$all_comparisons" ]; then
             echo "No comparisons generated"
             echo "has_comparison=false" >> $GITHUB_OUTPUT
@@ -197,13 +197,13 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
+
             const botComment = comments.find(
               (comment) =>
                 comment.user.type === 'Bot' &&
                 comment.body.includes('Bundle Size Comparison')
             );
-            
+
             core.setOutput('result', botComment?.id || '');
 
       - name: Create or update PR comment
@@ -214,7 +214,7 @@ jobs:
           script: |
             const commentBody = `${{ steps.compare.outputs.comparison }}`;
             const existingCommentId = ${{ steps.find-comment.outputs.result }};
-            
+
             if (existingCommentId) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
@@ -232,4 +232,3 @@ jobs:
               });
               console.log('Created new comment');
             }
-
