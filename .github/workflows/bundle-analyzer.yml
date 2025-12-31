@@ -204,18 +204,82 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-            const script = fs.readFileSync('.github/scripts/find-comment.js', 'utf-8');
-            eval(script);
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            // Find bot comment that contains "Bundle Size Comparison"
+            const botComment = comments.find(
+              (comment) =>
+                comment.user.type === 'Bot' &&
+                comment.body.includes('📦 Bundle Size Comparison')
+            );
+
+            if (botComment) {
+              core.setOutput('result', botComment.id.toString());
+              console.log(`Found existing comment: ${botComment.id}`);
+            } else {
+              core.setOutput('result', '');
+              console.log('No existing comment found');
+            }
 
       - name: Create or update PR comment
         if: steps.compare.outputs.has_comparison == 'true'
         uses: actions/github-script@v7
-        env:
-          EXISTING_COMMENT_ID: ${{ steps.find-comment.outputs.result }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const script = fs.readFileSync('.github/scripts/post-comment.js', 'utf-8');
-            eval(script);
+            const path = require('path');
+
+            // Read comparison from file to avoid YAML/JavaScript escaping issues
+            let commentBody = '';
+            try {
+              const comparisonDir = 'comparison-results';
+              if (fs.existsSync(comparisonDir)) {
+                const comparisonFiles = fs.readdirSync(comparisonDir);
+                for (const file of comparisonFiles) {
+                  if (file.endsWith('.md')) {
+                    const content = fs.readFileSync(
+                      path.join(comparisonDir, file),
+                      'utf-8'
+                    );
+                    if (commentBody) {
+                      commentBody += '\n\n---\n\n' + content;
+                    } else {
+                      commentBody = content;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('Error reading comparison files:', error.message);
+              return;
+            }
+
+            if (!commentBody || !commentBody.trim()) {
+              console.log('No comment body to post');
+              return;
+            }
+
+            const existingCommentId = '${{ steps.find-comment.outputs.result }}'.trim();
+
+            if (existingCommentId) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: parseInt(existingCommentId),
+                body: commentBody,
+              });
+              console.log(`Updated existing comment: ${existingCommentId}`);
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody,
+              });
+              console.log('Created new comment');
+            }
