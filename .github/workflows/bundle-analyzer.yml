@@ -297,16 +297,26 @@ jobs:
           mkdir -p comparison-results
           all_comparisons=""
           has_main_stats=${{ steps.verify-stats.outputs.has_main_stats }}
+          
+          echo "=== Debug Info ==="
+          echo "has_main_stats: $has_main_stats"
+          echo "Changed apps: ${{ steps.changed-apps.outputs.apps }}"
+          echo "=================="
 
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             app_name=$(basename $app)
             main_stats="main-stats/${app_name}-stats.json"
             pr_stats="${app}/.next/stats.json"
             
+            echo "Processing $app_name..."
+            echo "  PR stats path: $pr_stats"
+            echo "  Main stats path: $main_stats"
+            
             if [ ! -f "$pr_stats" ]; then
-              echo "Warning: PR stats not found for $app_name at $pr_stats, skipping"
+              echo "  ✗ PR stats not found for $app_name at $pr_stats, skipping"
               continue
             fi
+            echo "  ✓ PR stats found"
             
             if [ "$has_main_stats" != "true" ] || [ ! -f "$main_stats" ]; then
               echo "Main stats not available for $app_name"
@@ -356,11 +366,14 @@ jobs:
             fi
           done
 
+          echo "=== Final Check ==="
+          echo "all_comparisons length: ${#all_comparisons}"
           if [ -z "$all_comparisons" ]; then
             echo "No comparisons generated"
             echo "has_comparison=false" >> $GITHUB_OUTPUT
             echo "comparison=" >> $GITHUB_OUTPUT
           else
+            echo "Comparisons generated successfully"
             echo "has_comparison=true" >> $GITHUB_OUTPUT
             # Escape for multiline output
             {
