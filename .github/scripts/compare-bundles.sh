@@ -75,16 +75,19 @@ $comparison"
   
   echo "Comparing $app_name..."
   comparison=$(node scripts/compare-bundles.js "$main_stats" "$pr_stats")
-  echo "$comparison" > "comparison-results/${app_name}.md"
+  
+  # Add app name to the title
+  comparison_with_app=$(echo "$comparison" | sed "s/## 📦 Bundle Size Comparison/## 📦 Bundle Size Comparison - $app_name/")
+  echo "$comparison_with_app" > "comparison-results/${app_name}.md"
   
   if [ -z "$all_comparisons" ]; then
-    all_comparisons="$comparison"
+    all_comparisons="$comparison_with_app"
   else
     all_comparisons="$all_comparisons
 
 ---
 
-$comparison"
+$comparison_with_app"
   fi
 done
 
