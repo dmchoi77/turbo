@@ -212,8 +212,13 @@ jobs:
               continue
             fi
             app_name=$(basename $app)
-            ANALYZE=true pnpm turbo build --filter="./$app" --env-mode=strict || \
-            ANALYZE=true pnpm turbo build --filter="$app_name" --env-mode=strict || true
+            if ANALYZE=true pnpm turbo build --filter="./$app" --env-mode=strict 2>&1; then
+              echo "Built $app successfully"
+            elif ANALYZE=true pnpm turbo build --filter="$app_name" --env-mode=strict 2>&1; then
+              echo "Built $app successfully"
+            else
+              echo "Warning: Failed to build $app on main branch (may not have required dependencies)"
+            fi
           done
 
           mkdir -p main-stats
@@ -239,6 +244,9 @@ jobs:
         env:
           ANALYZE: "true"
         run: |
+          # Ensure dependencies are installed
+          pnpm install
+
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
             app_name=$(basename $app)
