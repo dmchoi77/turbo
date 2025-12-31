@@ -137,7 +137,7 @@ jobs:
         id: cache-main-stats
         uses: actions/cache@v4
         with:
-          path: main-stats
+          path: bundle-stats
           key: bundle-stats-main-${{ steps.main-sha.outputs.main_sha }}
           restore-keys: |
             bundle-stats-main-
@@ -145,14 +145,16 @@ jobs:
       - name: Check if main stats cached
         id: check-stats
         run: |
-          if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
+          # Copy from bundle-stats to main-stats for consistency
+          mkdir -p main-stats
+          if [ -d "bundle-stats" ] && [ "$(ls -A bundle-stats 2>/dev/null)" ]; then
+            cp bundle-stats/*.json main-stats/ 2>/dev/null || true
             echo "has_main_stats=true" >> $GITHUB_OUTPUT
             echo "✓ Main branch stats found from cache"
             ls -la main-stats/
           else
             echo "has_main_stats=false" >> $GITHUB_OUTPUT
             echo "ℹ Main branch stats not found in cache - will build main branch for comparison"
-            mkdir -p main-stats
           fi
 
       - name: Build main branch for comparison
@@ -162,9 +164,16 @@ jobs:
 
       - name: Cache main branch stats (if built)
         if: steps.check-stats.outputs.has_main_stats != 'true'
+        run: |
+          # Copy from main-stats to bundle-stats for caching
+          mkdir -p bundle-stats
+          cp main-stats/*.json bundle-stats/ 2>/dev/null || true
+          
+      - name: Save main branch stats to cache (if built)
+        if: steps.check-stats.outputs.has_main_stats != 'true'
         uses: actions/cache@v4
         with:
-          path: main-stats
+          path: bundle-stats
           key: bundle-stats-main-${{ steps.main-sha.outputs.main_sha }}
           restore-keys: |
             bundle-stats-main-
