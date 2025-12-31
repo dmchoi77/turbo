@@ -28,19 +28,15 @@ const processData = () => {
   const debounced = _.debounce(() => {}, 100);
   const throttled = _.throttle(() => {}, 100);
   const memoized = _.memoize((n: number) => n * 2);
-  
+
   // Use more lodash functions to increase bundle size
   const mapped = _.map(largeDataArray, (item) => ({
     ...item,
     processed: true,
   }));
   const filtered = _.filter(mapped, (item) => item.id % 2 === 0);
-  const reduced = _.reduce(
-    filtered,
-    (acc, item) => acc + item.id,
-    0
-  );
-  
+  const reduced = _.reduce(filtered, (acc, item) => acc + item.id, 0);
+
   return {
     grouped,
     sorted,
@@ -96,7 +92,9 @@ export default function Home() {
           </li>
           <li>Save and see your changes instantly.</li>
           <li>Current time: {currentTime}</li>
-          <li>Processed {Object.keys(processedData.grouped).length} categories</li>
+          <li>
+            Processed {Object.keys(processedData.grouped).length} categories
+          </li>
         </ol>
 
         <div className={styles.ctas}>
