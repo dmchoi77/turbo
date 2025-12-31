@@ -165,35 +165,118 @@ jobs:
       - name: Find main branch workflow run
         id: find-run
         uses: actions/github-script@v7
+        continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'bundle-analyzer.yml',
-              branch: '${{ github.base_ref }}',
-              status: 'success',
-              per_page: 1,
-            });
-
-            if (runs.workflow_runs.length === 0) {
+            try {
+              // Get the latest successful workflow run on main branch
+              // This will always get the most recent artifact, so if main branch
+              // was updated, we'll get the new artifact automatically
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'bundle-analyzer.yml',
+                branch: '${{ github.base_ref }}',
+                status: 'success',
+                per_page: 1, // Get only the latest one
+              });
+              
+              if (runs.workflow_runs.length === 0) {
+                core.setOutput('run_id', '');
+                core.setOutput('has_artifact', 'false');
+                console.log('No successful workflow run found on main branch');
+                console.log('Will build main branch to generate stats');
+              } else {
+                const run = runs.workflow_runs[0];
+                const runId = run.id;
+                const runDate = new Date(run.created_at).toISOString();
+                core.setOutput('run_id', runId);
+                core.setOutput('has_artifact', 'true');
+                console.log(`Found latest main branch workflow run: ${runId}`);
+                console.log(`Run created at: ${runDate}`);
+                console.log(`Commit: ${run.head_sha.substring(0, 7)}`);
+              }
+            } catch (error) {
               core.setOutput('run_id', '');
-              console.log('No successful workflow run found on main branch');
-            } else {
-              const runId = runs.workflow_runs[0].id;
-              core.setOutput('run_id', runId);
-              console.log(`Found workflow run: ${runId}`);
+              core.setOutput('has_artifact', 'false');
+              console.log('Error finding workflow run:', error.message);
+              console.log('Will build main branch to generate stats');
             }
 
       - name: Download main branch stats
-        if: steps.find-run.outputs.run_id != ''
+        id: download-stats
+        if: steps.find-run.outputs.has_artifact == 'true'
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: bundle-stats-main
           path: main-stats
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ steps.find-run.outputs.run_id }}
+
+      - name: Check if main stats downloaded
+        id: check-stats
+        run: |
+          if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
+            echo "has_main_stats=true" >> $GITHUB_OUTPUT
+            echo "Main stats found from artifact:"
+            ls -la main-stats/
+          else
+            echo "has_main_stats=false" >> $GITHUB_OUTPUT
+            echo "Main stats not available from artifact - will build main branch"
+            mkdir -p main-stats
+          fi
+
+      - name: Build main branch for comparison
+        if: steps.check-stats.outputs.has_main_stats != 'true'
+        run: |
+          echo "Building main branch to generate stats for comparison..."
+
+          # Save current branch/commit
+          CURRENT_REF=$(git rev-parse HEAD)
+          echo "Current ref: $CURRENT_REF"
+
+          # Fetch and checkout main branch
+          git fetch origin ${{ github.base_ref }}:origin/${{ github.base_ref }} --depth=1
+          git checkout origin/${{ github.base_ref }}
+
+          # Install dependencies
+          pnpm install --frozen-lockfile
+
+          # Build changed apps with analysis
+          for app in ${{ steps.changed-apps.outputs.apps }}; do
+            echo "Building $app on main branch..."
+            ANALYZE=true turbo build --filter="$app" --env-mode=strict
+          done
+
+          # Collect stats.json files
+          mkdir -p main-stats
+          for app in ${{ steps.changed-apps.outputs.apps }}; do
+            app_name=$(basename $app)
+            if [ -f "$app/.next/stats.json" ]; then
+              cp "$app/.next/stats.json" "main-stats/${app_name}-stats.json"
+              echo "Saved main branch stats for $app_name"
+            else
+              echo "Warning: stats.json not found for $app_name on main branch at $app/.next/stats.json"
+            fi
+          done
+
+          # Go back to PR branch
+          git checkout $CURRENT_REF
+          echo "Returned to PR branch"
+
+      - name: Verify main stats
+        id: verify-stats
+        run: |
+          if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
+            echo "has_main_stats=true" >> $GITHUB_OUTPUT
+            echo "Main stats available:"
+            ls -la main-stats/
+          else
+            echo "has_main_stats=false" >> $GITHUB_OUTPUT
+            echo "Main stats still not available"
+          fi
 
       - name: Build PR branch with analysis
         env:
@@ -209,21 +292,52 @@ jobs:
         run: |
           mkdir -p comparison-results
           all_comparisons=""
+          has_main_stats=${{ steps.check-stats.outputs.has_main_stats }}
 
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             app_name=$(basename $app)
             main_stats="main-stats/${app_name}-stats.json"
             pr_stats="${app}/.next/stats.json"
             
-            if [ ! -f "$main_stats" ]; then
-              echo "Warning: Main stats not found for $app_name"
-              echo "This might be the first build or main branch stats are not available yet."
-              echo "Skipping comparison for $app_name"
+            if [ ! -f "$pr_stats" ]; then
+              echo "Warning: PR stats not found for $app_name at $pr_stats, skipping"
               continue
             fi
             
-            if [ ! -f "$pr_stats" ]; then
-              echo "Warning: PR stats not found for $app_name, skipping comparison"
+            if [ "$has_main_stats" != "true" ] || [ ! -f "$main_stats" ]; then
+              echo "Main stats not available for $app_name"
+              echo "This might be the first build or main branch stats are not available yet."
+              echo "Showing PR bundle size only for $app_name"
+              
+              # Generate stats summary without comparison
+              pr_size=$(node -e "
+                const fs = require('fs');
+                const stats = JSON.parse(fs.readFileSync('$pr_stats', 'utf-8'));
+                let total = 0;
+                if (stats.chunks) {
+                  stats.chunks.forEach(chunk => {
+                    if (chunk.parsedSize !== undefined) {
+                      total += chunk.parsedSize;
+                    } else if (chunk.size) {
+                      total += chunk.size;
+                    }
+                  });
+                }
+                console.log((total / 1024).toFixed(2));
+              ")
+              
+              comparison="## 📦 Bundle Size Analysis - $app_name\n\n"
+              comparison+="⚠️ **Main branch stats not available** - This might be the first PR or main branch hasn't been built yet.\n\n"
+              comparison+="**Current PR Bundle Size:** ${pr_size} KB\n\n"
+              comparison+="*Note: Comparison will be available after main branch is built.*"
+              
+              echo "$comparison" > "comparison-results/${app_name}.md"
+              
+              if [ -z "$all_comparisons" ]; then
+                all_comparisons="$comparison"
+              else
+                all_comparisons="$all_comparisons\n\n---\n\n$comparison"
+              fi
               continue
             fi
             
