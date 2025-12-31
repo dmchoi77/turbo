@@ -3,7 +3,8 @@
 import Image, { type ImageProps } from "next/image";
 import { Button } from "@repo/ui/button";
 import _ from "lodash";
-import moment from "moment";
+// docs 앱은 moment 대신 date-fns 사용 (더 작은 번들)
+import { format } from "date-fns";
 import styles from "./page.module.css";
 
 // Large data array to increase bundle size
