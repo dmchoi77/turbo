@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   # Job 1: Main branch - Save stats.json as artifact
   save-main-stats:
@@ -55,7 +60,9 @@ jobs:
         run: |
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
-            turbo build --filter="$app" --env-mode=strict
+            app_name=$(basename $app)
+            pnpm turbo build --filter="./$app" --env-mode=strict || \
+            pnpm turbo build --filter="$app_name" --env-mode=strict
           done
 
       - name: Collect stats.json files
@@ -108,14 +115,34 @@ jobs:
         id: changed-apps
         run: |
           git fetch origin ${{ github.base_ref }}:origin/${{ github.base_ref }} || true
-          CHANGED_APPS=$(turbo list --filter="[origin/${{ github.base_ref }}]..." --json 2>/dev/null | jq -r '.[] | select(.task == "build") | .package' | grep -E "^(apps/docs|apps/web)$" || true)
+
+          CHANGED_APPS=""
+
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^apps/web/"; then
+            CHANGED_APPS="apps/web"
+          fi
+
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^apps/docs/"; then
+            if [ -n "$CHANGED_APPS" ]; then
+              CHANGED_APPS="$CHANGED_APPS apps/docs"
+            else
+              CHANGED_APPS="apps/docs"
+            fi
+          fi
+
           if [ -z "$CHANGED_APPS" ]; then
-            echo "No Next.js apps changed, skipping..."
+            TURBO_APPS=$(pnpm turbo list --filter="[origin/${{ github.base_ref }}]..." --json 2>/dev/null | jq -r '.[] | select(.task == "build") | .package' | grep -E "^(apps/docs|apps/web)$" || true)
+            if [ -n "$TURBO_APPS" ]; then
+              CHANGED_APPS="$TURBO_APPS"
+            fi
+          fi
+
+          if [ -z "$CHANGED_APPS" ]; then
             echo "apps=" >> $GITHUB_OUTPUT
             exit 0
           fi
+
           echo "apps=$CHANGED_APPS" >> $GITHUB_OUTPUT
-          echo "Changed apps: $CHANGED_APPS"
 
       - name: Check if any apps changed
         if: steps.changed-apps.outputs.apps == ''
@@ -123,21 +150,122 @@ jobs:
           echo "No Next.js apps changed, exiting..."
           exit 0
 
+      - name: Find main branch workflow run
+        id: find-run
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'bundle-analyzer.yml',
+                branch: '${{ github.base_ref }}',
+                status: 'success',
+                per_page: 1,
+              });
+              
+              if (runs.workflow_runs.length === 0) {
+                core.setOutput('run_id', '');
+                core.setOutput('has_artifact', 'false');
+              } else {
+                core.setOutput('run_id', runs.workflow_runs[0].id);
+                core.setOutput('has_artifact', 'true');
+              }
+            } catch (error) {
+              core.setOutput('run_id', '');
+              core.setOutput('has_artifact', 'false');
+            }
+
       - name: Download main branch stats
+        id: download-stats
+        if: steps.find-run.outputs.has_artifact == 'true'
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: bundle-stats-main
           path: main-stats
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          allow-cross-artifact-access: true
+          run-id: ${{ steps.find-run.outputs.run_id }}
+        env:
+          ACTIONS_STEP_DEBUG: false
+
+      - name: Check if main stats downloaded
+        id: check-stats
+        run: |
+          if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
+            echo "has_main_stats=true" >> $GITHUB_OUTPUT
+            echo "✓ Main branch stats found from artifact"
+          else
+            echo "has_main_stats=false" >> $GITHUB_OUTPUT
+            echo "ℹ Main branch stats not found - will build main branch for comparison"
+            mkdir -p main-stats
+          fi
+
+      - name: Build main branch for comparison
+        if: steps.check-stats.outputs.has_main_stats != 'true'
+        run: |
+          CURRENT_REF=$(git rev-parse HEAD)
+          git fetch origin ${{ github.base_ref }} --depth=1
+          git checkout -b temp-main-branch FETCH_HEAD
+          pnpm install
+
+          mkdir -p main-stats
+          for app in ${{ steps.changed-apps.outputs.apps }; do
+            if [ ! -d "$app" ]; then
+              echo "Skipping $app - does not exist on main branch"
+              continue
+            fi
+            app_name=$(basename $app)
+            echo "Building $app on main branch..."
+            
+            # Try to build with ANALYZE=true
+            if ANALYZE=true pnpm turbo build --filter="./$app" --env-mode=strict; then
+              echo "✓ Built $app successfully"
+            elif ANALYZE=true pnpm turbo build --filter="$app_name" --env-mode=strict; then
+              echo "✓ Built $app successfully"
+            else
+              echo "✗ Failed to build $app on main branch"
+              continue
+            fi
+            
+            # Check if stats.json was created
+            if [ -f "$app/.next/stats.json" ]; then
+              cp "$app/.next/stats.json" "main-stats/${app_name}-stats.json"
+              echo "✓ Copied stats.json for $app_name"
+            else
+              echo "✗ stats.json not found for $app_name at $app/.next/stats.json"
+            fi
+          done
+
+          echo "Main stats files:"
+          ls -la main-stats/ || echo "No stats files found"
+
+          git checkout $CURRENT_REF
+
+      - name: Verify main stats
+        id: verify-stats
+        run: |
+          if [ -d "main-stats" ] && [ "$(ls -A main-stats 2>/dev/null)" ]; then
+            echo "has_main_stats=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_main_stats=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build PR branch with analysis
         env:
           ANALYZE: "true"
         run: |
+          # Ensure dependencies are installed
+          pnpm install
+
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             echo "Building $app..."
-            turbo build --filter="$app" --env-mode=strict
+            app_name=$(basename $app)
+            pnpm turbo build --filter="./$app" --env-mode=strict || \
+            pnpm turbo build --filter="$app_name" --env-mode=strict
           done
 
       - name: Compare bundles and generate report
@@ -145,19 +273,52 @@ jobs:
         run: |
           mkdir -p comparison-results
           all_comparisons=""
+          has_main_stats=${{ steps.verify-stats.outputs.has_main_stats }}
 
           for app in ${{ steps.changed-apps.outputs.apps }}; do
             app_name=$(basename $app)
             main_stats="main-stats/${app_name}-stats.json"
             pr_stats="${app}/.next/stats.json"
             
-            if [ ! -f "$main_stats" ]; then
-              echo "Warning: Main stats not found for $app_name, skipping comparison"
+            if [ ! -f "$pr_stats" ]; then
+              echo "Warning: PR stats not found for $app_name at $pr_stats, skipping"
               continue
             fi
             
-            if [ ! -f "$pr_stats" ]; then
-              echo "Warning: PR stats not found for $app_name, skipping comparison"
+            if [ "$has_main_stats" != "true" ] || [ ! -f "$main_stats" ]; then
+              echo "Main stats not available for $app_name"
+              echo "This might be the first build or main branch stats are not available yet."
+              echo "Showing PR bundle size only for $app_name"
+              
+              # Generate stats summary without comparison
+              pr_size=$(node -e "
+                const fs = require('fs');
+                const stats = JSON.parse(fs.readFileSync('$pr_stats', 'utf-8'));
+                let total = 0;
+                if (stats.chunks) {
+                  stats.chunks.forEach(chunk => {
+                    if (chunk.parsedSize !== undefined) {
+                      total += chunk.parsedSize;
+                    } else if (chunk.size) {
+                      total += chunk.size;
+                    }
+                  });
+                }
+                console.log((total / 1024).toFixed(2));
+              ")
+              
+              comparison="## 📦 Bundle Size Analysis - $app_name\n\n"
+              comparison+="⚠️ **Main branch stats not available** - This might be the first PR or main branch hasn't been built yet.\n\n"
+              comparison+="**Current PR Bundle Size:** ${pr_size} KB\n\n"
+              comparison+="*Note: Comparison will be available after main branch is built.*"
+              
+              echo "$comparison" > "comparison-results/${app_name}.md"
+              
+              if [ -z "$all_comparisons" ]; then
+                all_comparisons="$comparison"
+              else
+                all_comparisons="$all_comparisons\n\n---\n\n$comparison"
+              fi
               continue
             fi
             
@@ -175,6 +336,7 @@ jobs:
           if [ -z "$all_comparisons" ]; then
             echo "No comparisons generated"
             echo "has_comparison=false" >> $GITHUB_OUTPUT
+            echo "comparison=" >> $GITHUB_OUTPUT
           else
             echo "has_comparison=true" >> $GITHUB_OUTPUT
             # Escape for multiline output
@@ -212,14 +374,19 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const commentBody = `${{ steps.compare.outputs.comparison }}`;
-            const existingCommentId = ${{ steps.find-comment.outputs.result }};
+            const commentBody = `${{ steps.compare.outputs.comparison }}`.trim();
+            const existingCommentId = `${{ steps.find-comment.outputs.result }}`.trim();
+
+            if (!commentBody) {
+              console.log('No comment body to post');
+              return;
+            }
 
             if (existingCommentId) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                comment_id: existingCommentId,
+                comment_id: parseInt(existingCommentId),
                 body: commentBody,
               });
               console.log('Updated existing comment');
