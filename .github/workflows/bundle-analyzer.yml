@@ -215,7 +215,7 @@ jobs:
           pnpm install
 
           mkdir -p main-stats
-          for app in ${{ steps.changed-apps.outputs.apps }; do
+          for app in ${{ steps.changed-apps.outputs.apps }}; do
             if [ ! -d "$app" ]; then
               echo "Skipping $app - does not exist on main branch"
               continue
