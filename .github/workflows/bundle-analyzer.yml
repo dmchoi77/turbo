@@ -212,28 +212,37 @@ jobs:
           git checkout -b temp-main-branch FETCH_HEAD
           pnpm install
 
-          for app in ${{ steps.changed-apps.outputs.apps }}; do
+          mkdir -p main-stats
+          for app in ${{ steps.changed-apps.outputs.apps }; do
             if [ ! -d "$app" ]; then
+              echo "Skipping $app - does not exist on main branch"
               continue
             fi
             app_name=$(basename $app)
-            if ANALYZE=true pnpm turbo build --filter="./$app" --env-mode=strict 2>&1; then
-              echo "Built $app successfully"
-            elif ANALYZE=true pnpm turbo build --filter="$app_name" --env-mode=strict 2>&1; then
-              echo "Built $app successfully"
+            echo "Building $app on main branch..."
+            
+            # Try to build with ANALYZE=true
+            if ANALYZE=true pnpm turbo build --filter="./$app" --env-mode=strict; then
+              echo "✓ Built $app successfully"
+            elif ANALYZE=true pnpm turbo build --filter="$app_name" --env-mode=strict; then
+              echo "✓ Built $app successfully"
             else
-              echo "Warning: Failed to build $app on main branch (may not have required dependencies)"
+              echo "✗ Failed to build $app on main branch"
+              continue
             fi
-          done
-
-          mkdir -p main-stats
-          for app in ${{ steps.changed-apps.outputs.apps }}; do
-            app_name=$(basename $app)
-            if [ -d "$app" ] && [ -f "$app/.next/stats.json" ]; then
+            
+            # Check if stats.json was created
+            if [ -f "$app/.next/stats.json" ]; then
               cp "$app/.next/stats.json" "main-stats/${app_name}-stats.json"
+              echo "✓ Copied stats.json for $app_name"
+            else
+              echo "✗ stats.json not found for $app_name at $app/.next/stats.json"
             fi
           done
 
+          echo "Main stats files:"
+          ls -la main-stats/ || echo "No stats files found"
+          
           git checkout $CURRENT_REF
 
       - name: Verify main stats
