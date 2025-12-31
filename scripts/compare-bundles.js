@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "fs";
-import { resolve } from "path";
+const { readFileSync } = require("fs");
+const { resolve } = require("path");
 
 /**
  * Format bytes to human readable format
