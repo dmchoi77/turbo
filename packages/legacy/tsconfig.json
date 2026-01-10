@@ -1,0 +1,17 @@
+{
+  "extends": "@repo/typescript-config/react-library.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "types": ["node"],
+    "composite": false,
+    "paths": {
+      "@legacy/definitions/*": ["./src/definitions/*"],
+      "@legacy/helpers/*": ["./src/helpers/*"]
+    },
+    "outDir": "./dist",
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.js", "**/dist/**"]
+}

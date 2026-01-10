@@ -1,0 +1,42 @@
+{
+  "name": "@repo/legacy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm run clean:dist && pnpm run clean:js && pnpm run build:types && pnpm run build:js",
+    "build:js": "NODE_OPTIONS='--max-old-space-size=8192' webpack --config webpack.config.js",
+    "build:types": "tsc -p tsconfig.build.json",
+    "clean:js": "find dist -type f \\( -name '*.js' -o -name '*.js.map' \\) -delete 2>/dev/null || true",
+    "clean:dist": "rm -rf dist 2>/dev/null || true",
+    "lint": "echo 'Linting not configured yet'"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "css-loader": "^7.1.2",
+    "glob": "^11.0.0",
+    "style-loader": "^4.0.0",
+    "swc-loader": "^0.2.6",
+    "typescript": "^5.5.4",
+    "webpack": "^5.104.1",
+    "webpack-cli": "^6.0.1"
+  },
+  "exports": {
+    "./definitions/*": {
+      "types": "./dist/definitions/*.d.ts",
+      "import": "./dist/definitions/*.js"
+    },
+    "./helpers/*": {
+      "types": "./dist/helpers/*.d.ts",
+      "import": "./dist/helpers/*.js"
+    }
+  }
+}
