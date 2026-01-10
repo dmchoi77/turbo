@@ -8,7 +8,28 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig = {
+  // Workspace 패키지를 transpile하여 번들링 (필요한 경우)
+  transpilePackages: ['@repo/ui', '@repo/utils'],
   webpack: (config, { isServer, dev }) => {
+    if (!isServer) {
+      // Client-side에서 workspace 패키지를 공통 청크로 분리
+      config.optimization = config.optimization || {};
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks?.cacheGroups,
+          // Workspace 패키지를 별도 공통 청크로 분리
+          workspace: {
+            test: /[\\/]node_modules[\\/]@repo[\\/]/,
+            name: 'workspace-packages',
+            chunks: 'all',
+            priority: 20,
+            enforce: true,
+          },
+        },
+      };
+    }
+
     if (process.env.ANALYZE === 'true' && !isServer && !dev) {
       // Generate stats.json for bundle analysis in .next directory
       config.plugins.push({
