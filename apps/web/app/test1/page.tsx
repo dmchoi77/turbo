@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import { Button } from "@repo/ui/button";
@@ -16,6 +16,7 @@ import { Progress } from "@repo/ui/progress";
 import { Avatar } from "@repo/ui/avatar";
 import { Divider } from "@repo/ui/divider";
 import { Card } from "@repo/ui/card";
+import { DataVisualization } from "@repo/ui/data-visualization";
 
 export default function Test1Page(): JSX.Element {
   const [inputValue, setInputValue] = useState("");
@@ -36,7 +37,9 @@ export default function Test1Page(): JSX.Element {
 
   return (
     <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "2rem", marginBottom: "2rem", fontWeight: "bold" }}>
+      <h1
+        style={{ fontSize: "2rem", marginBottom: "2rem", fontWeight: "bold" }}
+      >
         Test Page 1 - Form Components
       </h1>
 
@@ -59,8 +62,17 @@ export default function Test1Page(): JSX.Element {
 
         {/* Form Controls Section */}
         <section>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Form Controls</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", maxWidth: "500px" }}>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            Form Controls
+          </h2>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.5rem",
+              maxWidth: "500px",
+            }}
+          >
             <Input
               label="Text Input"
               value={inputValue}
@@ -137,9 +149,20 @@ export default function Test1Page(): JSX.Element {
 
         {/* UI Components Section */}
         <section>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>UI Components</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            UI Components
+          </h2>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
               <Badge variant="default">Default Badge</Badge>
               <Badge variant="primary">Primary Badge</Badge>
               <Badge variant="success">Success Badge</Badge>
@@ -167,11 +190,23 @@ export default function Test1Page(): JSX.Element {
                 variant="default"
                 size="md"
               />
-              <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
-                <Button appName="web" onClick={() => setProgressValue(Math.max(0, progressValue - 10))}>
+              <div
+                style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}
+              >
+                <Button
+                  appName="web"
+                  onClick={() =>
+                    setProgressValue(Math.max(0, progressValue - 10))
+                  }
+                >
                   Decrease
                 </Button>
-                <Button appName="web" onClick={() => setProgressValue(Math.min(100, progressValue + 10))}>
+                <Button
+                  appName="web"
+                  onClick={() =>
+                    setProgressValue(Math.min(100, progressValue + 10))
+                  }
+                >
                   Increase
                 </Button>
               </div>
@@ -196,29 +231,40 @@ export default function Test1Page(): JSX.Element {
         {/* Cards Section */}
         <section>
           <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Cards</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
-            <Card
-              title="Card 1"
-              href="https://example.com"
-              className="p-4"
-            >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+              gap: "1rem",
+            }}
+          >
+            <Card title="Card 1" href="https://example.com" className="p-4">
               This is a card component with some content.
             </Card>
-            <Card
-              title="Card 2"
-              href="https://example.com"
-              className="p-4"
-            >
+            <Card title="Card 2" href="https://example.com" className="p-4">
               Another card with different content.
             </Card>
-            <Card
-              title="Card 3"
-              href="https://example.com"
-              className="p-4"
-            >
+            <Card title="Card 3" href="https://example.com" className="p-4">
               Third card in the grid layout.
             </Card>
           </div>
+        </section>
+
+        <Divider label="Data Visualization" />
+
+        {/* Data Visualization Section */}
+        <section>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            Data Visualization
+          </h2>
+          <DataVisualization
+            colorScheme="primary"
+            width={600}
+            height={250}
+            showLineChart={true}
+            showBarChart={true}
+            showPieChart={true}
+          />
         </section>
       </div>
 
@@ -233,11 +279,7 @@ export default function Test1Page(): JSX.Element {
           <p style={{ marginBottom: "1rem" }}>
             This is a modal dialog with form controls inside.
           </p>
-          <Input
-            label="Modal Input"
-            placeholder="Type here..."
-            fullWidth
-          />
+          <Input label="Modal Input" placeholder="Type here..." fullWidth />
           <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
             <Button appName="web" onClick={() => setIsModalOpen(false)}>
               Close
@@ -249,4 +291,3 @@ export default function Test1Page(): JSX.Element {
     </div>
   );
 }
-

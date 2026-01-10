@@ -11,6 +11,7 @@ const entries = [
   "card",
   "checkbox",
   "code",
+  "data-visualization",
   "divider",
   "input",
   "modal",
@@ -43,7 +44,7 @@ export default [
       preserveModulesRoot: "src",
       entryFileNames: "[name]/index.mjs",
     },
-    external: ["react", "react-dom"],
+    external: ["react", "react-dom", "framer-motion"],
     plugins: [
       peerDepsExternal(),
       resolve({

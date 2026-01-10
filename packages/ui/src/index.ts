@@ -5,6 +5,7 @@ export * from "./button";
 export * from "./card";
 export * from "./checkbox";
 export * from "./code";
+export * from "./data-visualization";
 export * from "./divider";
 export * from "./input";
 export * from "./modal";

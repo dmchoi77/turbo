@@ -35,6 +35,10 @@
       "types": "./dist/code/index.d.ts",
       "import": "./dist/code/index.mjs"
     },
+    "./data-visualization": {
+      "types": "./dist/data-visualization/index.d.ts",
+      "import": "./dist/data-visualization/index.mjs"
+    },
     "./divider": {
       "types": "./dist/divider/index.d.ts",
       "import": "./dist/divider/index.mjs"

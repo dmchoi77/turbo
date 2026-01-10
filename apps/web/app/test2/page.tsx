@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import { Button } from "@repo/ui/button";
@@ -12,6 +12,7 @@ import { Avatar } from "@repo/ui/avatar";
 import { Divider } from "@repo/ui/divider";
 import { Card } from "@repo/ui/card";
 import { Spinner } from "@repo/ui/spinner";
+import { DataVisualization } from "@repo/ui/data-visualization";
 
 export default function Test2Page(): JSX.Element {
   const [currentPage, setCurrentPage] = useState(1);
@@ -20,11 +21,46 @@ export default function Test2Page(): JSX.Element {
 
   // Table data
   const tableData = [
-    { id: 1, name: "Alice Johnson", age: 28, email: "alice@example.com", status: "Active", role: "Developer" },
-    { id: 2, name: "Bob Smith", age: 35, email: "bob@example.com", status: "Active", role: "Designer" },
-    { id: 3, name: "Charlie Brown", age: 42, email: "charlie@example.com", status: "Inactive", role: "Manager" },
-    { id: 4, name: "Diana Prince", age: 29, email: "diana@example.com", status: "Active", role: "Developer" },
-    { id: 5, name: "Eve Wilson", age: 31, email: "eve@example.com", status: "Pending", role: "Designer" },
+    {
+      id: 1,
+      name: "Alice Johnson",
+      age: 28,
+      email: "alice@example.com",
+      status: "Active",
+      role: "Developer",
+    },
+    {
+      id: 2,
+      name: "Bob Smith",
+      age: 35,
+      email: "bob@example.com",
+      status: "Active",
+      role: "Designer",
+    },
+    {
+      id: 3,
+      name: "Charlie Brown",
+      age: 42,
+      email: "charlie@example.com",
+      status: "Inactive",
+      role: "Manager",
+    },
+    {
+      id: 4,
+      name: "Diana Prince",
+      age: 29,
+      email: "diana@example.com",
+      status: "Active",
+      role: "Developer",
+    },
+    {
+      id: 5,
+      name: "Eve Wilson",
+      age: 31,
+      email: "eve@example.com",
+      status: "Pending",
+      role: "Designer",
+    },
   ];
 
   const tableColumns = [
@@ -36,7 +72,12 @@ export default function Test2Page(): JSX.Element {
       key: "status",
       header: "Status",
       render: (value: string) => {
-        const variant = value === "Active" ? "success" : value === "Inactive" ? "error" : "warning";
+        const variant =
+          value === "Active"
+            ? "success"
+            : value === "Inactive"
+              ? "error"
+              : "warning";
         return <Badge variant={variant}>{value}</Badge>;
       },
     },
@@ -45,7 +86,9 @@ export default function Test2Page(): JSX.Element {
 
   return (
     <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "2rem", marginBottom: "2rem", fontWeight: "bold" }}>
+      <h1
+        style={{ fontSize: "2rem", marginBottom: "2rem", fontWeight: "bold" }}
+      >
         Test Page 2 - Data Display Components
       </h1>
 
@@ -62,38 +105,71 @@ export default function Test2Page(): JSX.Element {
             </TabList>
             <TabPanels>
               <TabPanel value="tab1">
-                <div style={{ padding: "1.5rem", backgroundColor: "#f9fafb", borderRadius: "8px" }}>
+                <div
+                  style={{
+                    padding: "1.5rem",
+                    backgroundColor: "#f9fafb",
+                    borderRadius: "8px",
+                  }}
+                >
                   <h3 style={{ marginBottom: "1rem" }}>Overview Tab</h3>
-                  <p>This is the overview content. It contains general information about the system.</p>
-                  <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
-                    <Card
-                      title="Total Users"
-                      href="#"
-                      className="p-4"
-                    >
+                  <p>
+                    This is the overview content. It contains general
+                    information about the system.
+                  </p>
+                  <div
+                    style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}
+                  >
+                    <Card title="Total Users" href="#" className="p-4">
                       1,234 active users
                     </Card>
-                    <Card
-                      title="Revenue"
-                      href="#"
-                      className="p-4"
-                    >
+                    <Card title="Revenue" href="#" className="p-4">
                       $45,678 this month
                     </Card>
                   </div>
                 </div>
               </TabPanel>
               <TabPanel value="tab2">
-                <div style={{ padding: "1.5rem", backgroundColor: "#f9fafb", borderRadius: "8px" }}>
+                <div
+                  style={{
+                    padding: "1.5rem",
+                    backgroundColor: "#f9fafb",
+                    borderRadius: "8px",
+                  }}
+                >
                   <h3 style={{ marginBottom: "1rem" }}>Details Tab</h3>
-                  <p>Detailed information and configuration options are displayed here.</p>
+                  <p>
+                    Detailed information and configuration options are displayed
+                    here.
+                  </p>
                   <div style={{ marginTop: "1rem" }}>
-                    <Progress value={progressValue} showLabel variant="success" size="lg" />
-                    <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
-                      <Button appName="web" onClick={() => setProgressValue(Math.max(0, progressValue - 10))}>
+                    <Progress
+                      value={progressValue}
+                      showLabel
+                      variant="success"
+                      size="lg"
+                    />
+                    <div
+                      style={{
+                        marginTop: "1rem",
+                        display: "flex",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <Button
+                        appName="web"
+                        onClick={() =>
+                          setProgressValue(Math.max(0, progressValue - 10))
+                        }
+                      >
                         Decrease
                       </Button>
-                      <Button appName="web" onClick={() => setProgressValue(Math.min(100, progressValue + 10))}>
+                      <Button
+                        appName="web"
+                        onClick={() =>
+                          setProgressValue(Math.min(100, progressValue + 10))
+                        }
+                      >
                         Increase
                       </Button>
                     </div>
@@ -101,10 +177,23 @@ export default function Test2Page(): JSX.Element {
                 </div>
               </TabPanel>
               <TabPanel value="tab3">
-                <div style={{ padding: "1.5rem", backgroundColor: "#f9fafb", borderRadius: "8px" }}>
+                <div
+                  style={{
+                    padding: "1.5rem",
+                    backgroundColor: "#f9fafb",
+                    borderRadius: "8px",
+                  }}
+                >
                   <h3 style={{ marginBottom: "1rem" }}>Settings Tab</h3>
                   <p>Configure your application settings from this tab.</p>
-                  <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1rem",
+                    }}
+                  >
                     <Alert variant="info" title="Settings Info">
                       Changes made here will affect all users.
                     </Alert>
@@ -115,20 +204,78 @@ export default function Test2Page(): JSX.Element {
                 </div>
               </TabPanel>
               <TabPanel value="tab4">
-                <div style={{ padding: "1.5rem", backgroundColor: "#f9fafb", borderRadius: "8px" }}>
+                <div
+                  style={{
+                    padding: "1.5rem",
+                    backgroundColor: "#f9fafb",
+                    borderRadius: "8px",
+                  }}
+                >
                   <h3 style={{ marginBottom: "1rem" }}>Analytics Tab</h3>
                   <p>View analytics and performance metrics.</p>
-                  <div style={{ marginTop: "1rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-                    <div style={{ padding: "1rem", backgroundColor: "white", borderRadius: "8px", textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#3b82f6" }}>1,234</div>
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: "1rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "1rem",
+                        backgroundColor: "white",
+                        borderRadius: "8px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "2rem",
+                          fontWeight: "bold",
+                          color: "#3b82f6",
+                        }}
+                      >
+                        1,234
+                      </div>
                       <div style={{ color: "#6b7280" }}>Total Views</div>
                     </div>
-                    <div style={{ padding: "1rem", backgroundColor: "white", borderRadius: "8px", textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#10b981" }}>567</div>
+                    <div
+                      style={{
+                        padding: "1rem",
+                        backgroundColor: "white",
+                        borderRadius: "8px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "2rem",
+                          fontWeight: "bold",
+                          color: "#10b981",
+                        }}
+                      >
+                        567
+                      </div>
                       <div style={{ color: "#6b7280" }}>Active Users</div>
                     </div>
-                    <div style={{ padding: "1rem", backgroundColor: "white", borderRadius: "8px", textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#f59e0b" }}>89</div>
+                    <div
+                      style={{
+                        padding: "1rem",
+                        backgroundColor: "white",
+                        borderRadius: "8px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "2rem",
+                          fontWeight: "bold",
+                          color: "#f59e0b",
+                        }}
+                      >
+                        89
+                      </div>
                       <div style={{ color: "#6b7280" }}>New Signups</div>
                     </div>
                   </div>
@@ -142,8 +289,17 @@ export default function Test2Page(): JSX.Element {
 
         {/* Table Section */}
         <section>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Data Table</h2>
-          <div style={{ backgroundColor: "white", borderRadius: "8px", padding: "1rem", overflow: "auto" }}>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            Data Table
+          </h2>
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "8px",
+              padding: "1rem",
+              overflow: "auto",
+            }}
+          >
             <Table
               columns={tableColumns}
               data={tableData}
@@ -161,8 +317,17 @@ export default function Test2Page(): JSX.Element {
 
         {/* Progress Section */}
         <section>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Progress Indicators</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", maxWidth: "600px" }}>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            Progress Indicators
+          </h2>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.5rem",
+              maxWidth: "600px",
+            }}
+          >
             <div>
               <Progress value={25} showLabel variant="default" size="sm" />
             </div>
@@ -182,22 +347,47 @@ export default function Test2Page(): JSX.Element {
 
         {/* User Profiles Section */}
         <section>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>User Profiles</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem" }}>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            User Profiles
+          </h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gap: "1rem",
+            }}
+          >
             {tableData.map((user) => (
-              <Card
-                key={user.id}
-                title={user.name}
-                href="#"
-                className="p-4"
-              >
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-                  <Avatar size="lg">{user.name.split(" ").map(n => n[0]).join("")}</Avatar>
+              <Card key={user.id} title={user.name} href="#" className="p-4">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Avatar size="lg">
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </Avatar>
                   <div style={{ textAlign: "center" }}>
                     <div style={{ fontWeight: "bold" }}>{user.name}</div>
-                    <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>{user.role}</div>
+                    <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                      {user.role}
+                    </div>
                     <div style={{ marginTop: "0.5rem" }}>
-                      <Badge variant={user.status === "Active" ? "success" : user.status === "Inactive" ? "error" : "warning"}>
+                      <Badge
+                        variant={
+                          user.status === "Active"
+                            ? "success"
+                            : user.status === "Inactive"
+                              ? "error"
+                              : "warning"
+                        }
+                      >
                         {user.status}
                       </Badge>
                     </div>
@@ -212,7 +402,9 @@ export default function Test2Page(): JSX.Element {
 
         {/* Pagination Section */}
         <section>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Pagination</h2>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            Pagination
+          </h2>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <Pagination
               currentPage={currentPage}
@@ -222,7 +414,9 @@ export default function Test2Page(): JSX.Element {
               maxVisible={7}
             />
           </div>
-          <div style={{ marginTop: "1rem", textAlign: "center", color: "#6b7280" }}>
+          <div
+            style={{ marginTop: "1rem", textAlign: "center", color: "#6b7280" }}
+          >
             Current Page: {currentPage} of 20
           </div>
         </section>
@@ -231,8 +425,12 @@ export default function Test2Page(): JSX.Element {
 
         {/* Loading States Section */}
         <section>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Loading States</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            Loading States
+          </h2>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
+          >
             <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
               <div>
                 <div style={{ marginBottom: "0.5rem" }}>Small Spinner</div>
@@ -257,8 +455,12 @@ export default function Test2Page(): JSX.Element {
 
         {/* Alert Variants Section */}
         <section>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Alert Variants</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            Alert Variants
+          </h2>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
             <Alert variant="info" title="Information">
               This is an informational alert with important details.
             </Alert>
@@ -273,8 +475,46 @@ export default function Test2Page(): JSX.Element {
             </Alert>
           </div>
         </section>
+
+        <Divider label="Data Visualization" />
+
+        {/* Data Visualization Section */}
+        <section>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+            Data Visualization
+          </h2>
+          <DataVisualization
+            colorScheme="gradient"
+            width={700}
+            height={300}
+            lineData={[
+              { x: 0, y: 10 },
+              { x: 1, y: 25 },
+              { x: 2, y: 40 },
+              { x: 3, y: 35 },
+              { x: 4, y: 50 },
+              { x: 5, y: 65 },
+              { x: 6, y: 60 },
+              { x: 7, y: 75 },
+            ]}
+            barData={[
+              { label: "Q1", value: 50 },
+              { label: "Q2", value: 70 },
+              { label: "Q3", value: 60 },
+              { label: "Q4", value: 90 },
+            ]}
+            pieData={[
+              { label: "Product A", value: 35 },
+              { label: "Product B", value: 30 },
+              { label: "Product C", value: 20 },
+              { label: "Product D", value: 15 },
+            ]}
+            showLineChart={true}
+            showBarChart={true}
+            showPieChart={true}
+          />
+        </section>
       </div>
     </div>
   );
 }
-
