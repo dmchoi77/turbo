@@ -58,15 +58,18 @@ export default [
     ],
   },
 
-  // ESM build - root index only (without preserveModules)
+  // ESM build - root index with preserveModules
   {
     input: "src/index.ts",
     output: {
-      file: "dist/index.mjs",
+      dir: "dist",
       format: "es",
       sourcemap: true,
+      preserveModules: true,
+      preserveModulesRoot: "src",
+      entryFileNames: "[name].mjs",
     },
-    external: ["react", "react-dom"],
+    external: ["react", "react-dom", "framer-motion"],
     plugins: [
       peerDepsExternal(),
       resolve({
@@ -108,7 +111,7 @@ export default [
       file: "dist/index.d.ts",
       format: "es",
     },
-    external: ["react", "react-dom"],
+    external: ["react", "react-dom", "framer-motion"],
     plugins: [
       peerDepsExternal(),
       typescript({
