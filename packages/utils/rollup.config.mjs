@@ -16,14 +16,12 @@ export default [
     },
     external: ["@repo/core", "lodash", "moment"],
     plugins: [
-      resolve({
-        browser: true,
-      }),
+      resolve({ browser: true }),
       commonjs(),
       typescript({
         tsconfig: "./tsconfig.json",
-        declaration: false,
-        declarationDir: undefined,
+        declaration: true,
+        declarationDir: "dist",
       }),
     ],
   },

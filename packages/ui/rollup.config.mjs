@@ -47,19 +47,17 @@ export default [
     external: ["react", "react-dom", "framer-motion"],
     plugins: [
       peerDepsExternal(),
-      resolve({
-        browser: true,
-      }),
+      resolve({ browser: true }),
       commonjs(),
       typescript({
         tsconfig: "./tsconfig.json",
-        declaration: false,
-        declarationDir: undefined,
+        declaration: true, // 타입 선언도 함께 생성
+        declarationDir: "dist",
       }),
     ],
   },
 
-  // ESM build - root index with preserveModules
+  // ESM build - root index
   {
     input: "src/index.ts",
     output: {
@@ -73,53 +71,12 @@ export default [
     external: ["react", "react-dom", "framer-motion"],
     plugins: [
       peerDepsExternal(),
-      resolve({
-        browser: true,
-      }),
+      resolve({ browser: true }),
       commonjs(),
       typescript({
         tsconfig: "./tsconfig.json",
-        declaration: false,
-        declarationDir: undefined,
-      }),
-    ],
-  },
-  // TypeScript declarations - components only
-  {
-    input: componentInput,
-    output: {
-      dir: "dist",
-      format: "es",
-      preserveModules: true,
-      preserveModulesRoot: "src",
-      entryFileNames: "[name]/index.d.ts",
-    },
-    external: ["react", "react-dom", "framer-motion"],
-    plugins: [
-      peerDepsExternal(),
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: true,
+        declaration: true, // 타입 선언도 함께 생성
         declarationDir: "dist",
-        emitDeclarationOnly: true,
-      }),
-    ],
-  },
-  // TypeScript declarations - root index only
-  {
-    input: "src/index.ts",
-    output: {
-      file: "dist/index.d.ts",
-      format: "es",
-    },
-    external: ["react", "react-dom", "framer-motion"],
-    plugins: [
-      peerDepsExternal(),
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: true,
-        declarationDir: "dist",
-        emitDeclarationOnly: true,
       }),
     ],
   },
