@@ -1,45 +1,41 @@
-import "./App.css";
-import RemoteApp from "remoteApp/App";
-import { useAtom } from "jotai";
-import { countAtom } from "remoteApp/count";
-import { userAtom, loginAtom, logoutAtom } from "./stores/user";
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
+import { sum, capitalize } from '@repo/utils';
 
 function App() {
-  const [count, setCount] = useAtom(countAtom);
-  const [user] = useAtom(userAtom);
-  const [, login] = useAtom(loginAtom);
-  const [, logout] = useAtom(logoutAtom);
-
-  const handleLogin = () => {
-    login({
-      name: "Host User",
-      email: "host@example.com",
-    });
-  };
+  const [count, setCount] = useState(0)
+  const a = 10;
+  const b = 20;
+  const result = sum(a, b);
+  const appName = "my-app";
 
   return (
-    <div>
+    <>
       <div>
-        <h1>Host App</h1>
-        <div>
-          <button onClick={() => setCount(count + 1)}>Increment Count</button>
-          <p>Count: {count}</p>
-        </div>
-        <div>
-          <h2>User Info (Host Store)</h2>
-          <p>Name: {user.name}</p>
-          <p>Email: {user.email}</p>
-          <p>Status: {user.isLoggedIn ? "Logged In" : "Not Logged In"}</p>
-          {!user.isLoggedIn ? (
-            <button onClick={handleLogin}>Login</button>
-          ) : (
-            <button onClick={logout}>Logout</button>
-          )}
-        </div>
+        <a href="https://vitejs.dev" target="_blank">
+          <img src={viteLogo} className="logo" alt="Vite logo" />
+        </a>
+        <a href="https://react.dev" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
       </div>
-      <RemoteApp />
-    </div>
-  );
+      <h1>{capitalize(appName)}</h1>
+      <h2>10 + 20 = {result}</h2>
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.tsx</code> and save to test HMR
+        </p>
+      </div>
+      <p className="read-the-docs">
+        Click on the Vite and React logos to learn more
+      </p>
+    </>
+  )
 }
 
-export default App;
+export default App
