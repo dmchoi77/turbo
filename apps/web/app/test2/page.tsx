@@ -17,7 +17,6 @@ import { DataVisualization } from "@repo/ui/data-visualization";
 export default function Test2Page(): JSX.Element {
   const [currentPage, setCurrentPage] = useState(1);
   const [progressValue, setProgressValue] = useState(75);
-  const [activeTab, setActiveTab] = useState("tab1");
 
   // Table data
   const tableData = [
