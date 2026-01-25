@@ -14,10 +14,11 @@
   "dependencies": {
     "@repo/ui": "workspace:*",
     "@repo/utils": "workspace:*",
+    "@tanstack/react-query": "^5.90.20",
+    "framer-motion": "^11.11.17",
     "lodash": "^4.17.21",
     "moment": "^2.30.1",
     "next": "^15.1.0",
-    "framer-motion": "^11.11.17",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
