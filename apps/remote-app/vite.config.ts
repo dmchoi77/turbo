@@ -2,51 +2,42 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { federation } from "@module-federation/vite";
 
-const isProd = process.env.NODE_ENV === "production";
-
-// 배포 환경과 로컬 환경에 따라 base URL을 동적으로 설정
-const remoteBaseUrl = isProd
-  ? process.env.VITE_REMOTE_APP_URL
-  : "http://localhost:3200";
+const REMOTE_APP_URL = process.env.VITE_REMOTE_APP_URL || "http://localhost:3200";
 
 export default defineConfig({
   server: {
     port: 3200,
+    cors: true,
+    origin: REMOTE_APP_URL,
   },
+  preview: {
+    port: 3200,
+    cors: true,
+  },
+  base: `${REMOTE_APP_URL}/`,
   build: {
-    target: "esnext",
+    target: "chrome89",
+    minify: false,
+    cssCodeSplit: false,
   },
-  base: remoteBaseUrl,
   plugins: [
     react(),
     federation({
-      name: "remote-app",
+      name: "remoteApp",
       filename: "remoteEntry.js",
+      manifest: true,
       exposes: {
         "./App": "./src/App.tsx",
         "./count": "./src/stores/count.ts",
       },
-      remotes: {
-        hostApp: {
-          entry:
-            process.env.VITE_HOST_APP_ENTRY_URL ||
-            "http://localhost:3100/hostEntry.js",
-          name: "hostApp",
-          type: "module",
-        },
-      },
       shared: {
         react: {
-          name: "react",
           singleton: true,
+          requiredVersion: "^18.0.0",
         },
         "react-dom": {
-          name: "react-dom",
           singleton: true,
-        },
-        jotai: {
-          name: "jotai",
-          singleton: true,
+          requiredVersion: "^18.0.0",
         },
       },
     }),

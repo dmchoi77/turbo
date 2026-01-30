@@ -1,37 +1,28 @@
-import { useAtom } from "jotai";
-import { countAtom } from "./stores/count";
-import { userAtom, loginAtom, logoutAtom } from "hostApp/user";
+import { useState } from "react";
 
 function App() {
-  const [count, setCount] = useAtom(countAtom);
-  const [user] = useAtom(userAtom);
-  const [, login] = useAtom(loginAtom);
-  const [, logout] = useAtom(logoutAtom);
-
-  const handleLogin = () => {
-    login({
-      name: "Remote User",
-      email: "remote@example.com",
-    });
-  };
+  const [count, setCount] = useState(0);
 
   return (
-    <div>
-      <h1>Remote App</h1>
-      <div>
-        <button onClick={() => setCount(count + 1)}>Increment Count</button>
-        <p>Count: {count}</p>
-      </div>
-      <div>
-        <h2>User Info (from Host App)</h2>
-        <p>Name: {user.name}</p>
-        <p>Email: {user.email}</p>
-        <p>Status: {user.isLoggedIn ? "Logged In" : "Not Logged In"}</p>
-        {!user.isLoggedIn ? (
-          <button onClick={handleLogin}>Login</button>
-        ) : (
-          <button onClick={logout}>Logout</button>
-        )}
+    <div style={{ padding: "20px", border: "2px solid #4CAF50", borderRadius: "8px", margin: "10px" }}>
+      <h1>🚀 Remote App (Vite)</h1>
+      <p>This component is loaded from Vite remote app via Module Federation</p>
+      <div style={{ marginTop: "16px" }}>
+        <button
+          onClick={() => setCount(count + 1)}
+          style={{
+            padding: "10px 20px",
+            fontSize: "16px",
+            cursor: "pointer",
+            backgroundColor: "#4CAF50",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+          }}
+        >
+          Increment Count
+        </button>
+        <p style={{ fontSize: "24px", fontWeight: "bold" }}>Count: {count}</p>
       </div>
     </div>
   );
