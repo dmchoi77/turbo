@@ -1,24 +1,26 @@
 /** @type {import('next').NextConfig} */
 import bundleAnalyzer from '@next/bundle-analyzer';
 import { writeFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
 const nextConfig = {
-  // Workspace 패키지를 transpile하여 번들링 (필요한 경우)
+  output: 'standalone',
+  outputFileTracingRoot: join(__dirname, '../../'),
   transpilePackages: ['@repo/ui', '@repo/utils'],
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
-      // Client-side에서 workspace 패키지를 공통 청크로 분리
       config.optimization = config.optimization || {};
       config.optimization.splitChunks = {
         ...config.optimization.splitChunks,
         cacheGroups: {
           ...config.optimization.splitChunks?.cacheGroups,
-          // Workspace 패키지를 별도 공통 청크로 분리
           workspace: {
             test: /[\\/]node_modules[\\/]@repo[\\/]/,
             name: 'workspace-packages',
@@ -31,7 +33,6 @@ const nextConfig = {
     }
 
     if (process.env.ANALYZE === 'true' && !isServer && !dev) {
-      // Generate stats.json for bundle analysis in .next directory
       config.plugins.push({
         apply: (compiler) => {
           compiler.hooks.done.tap('StatsWriterPlugin', (stats) => {
