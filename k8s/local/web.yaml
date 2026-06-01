@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: turbo-local
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: turbo-local
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: turbo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+      app.kubernetes.io/part-of: turbo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: web
+        app.kubernetes.io/part-of: turbo
+    spec:
+      containers:
+        - name: web
+          image: turbo-web:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: 0.0.0.0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: turbo-local
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: turbo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: turbo
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
