@@ -32,6 +32,24 @@ This Turborepo has some additional tools already setup for you:
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
 
+### Module Federation fixtures
+
+The repository contains federation fixtures that keep the exposed component
+runtime consistent between host and remote:
+
+| Host           | Remote           | Support                                      |
+| -------------- | ---------------- | -------------------------------------------- |
+| `nuxt-mf-host` | `nuxt-mf-remote` | Nuxt/Vue SSR and browser hydration           |
+| `nextjs-host`  | `remote-app`     | React Host to Vite/React Remote, client-side |
+| `my-app`       | `remote-app`     | Vite/React Host to Vite/React Remote         |
+
+The Nuxt integration registers remote exposes as Vue components and the React
+fixtures expose React components. Module Federation can transport the modules
+across frameworks, but it does not convert Vue SFCs into React elements or
+React components into Vue VNodes. Cross-framework UI requires an explicit
+adapter, Web Component, or framework-neutral module contract and is not part
+of these fixtures.
+
 ### Build
 
 To build all apps and packages, run the following command:
