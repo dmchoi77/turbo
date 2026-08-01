@@ -1,0 +1,22 @@
+{
+  "name": "nuxt-mf-remote",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "predev": "nuxt prepare",
+    "dev": "nuxt dev --port 4301",
+    "preview": "nuxt preview --port 4301",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@module-federation/nuxt": "0.1.0",
+    "nuxt": "4.5.1",
+    "vue": "3.5.40",
+    "vue-router": "5.2.0"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vue-tsc": "3.3.8"
+  }
+}
