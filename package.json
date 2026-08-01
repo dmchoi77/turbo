@@ -6,7 +6,8 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "test": "turbo test"
+    "test": "turbo test",
+    "verify:react-mf": "node scripts/verify-react-mf.mjs"
   },
   "devDependencies": {
     "prettier": "^3.2.5",
@@ -17,9 +18,5 @@
   "packageManager": "pnpm@9.6.0",
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "@module-federation/vite": "^1.8.1",
-    "jotai": "^2.15.0"
   }
 }

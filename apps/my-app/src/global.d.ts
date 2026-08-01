@@ -4,6 +4,6 @@ declare module "remoteApp/App" {
 }
 
 declare module "remoteApp/count" {
-  const countAtom: ReturnType<typeof atom<number>>;
+  const countAtom: import("jotai").PrimitiveAtom<number>;
   export { countAtom };
 }

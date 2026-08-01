@@ -2,7 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { federation } from "@module-federation/vite";
 
-const REMOTE_APP_URL = process.env.VITE_REMOTE_APP_URL || "http://localhost:3200";
+const REMOTE_APP_URL =
+  process.env.VITE_REMOTE_APP_URL || "http://localhost:3200";
 
 export default defineConfig({
   server: {
@@ -32,12 +33,19 @@ export default defineConfig({
       },
       shared: {
         react: {
+          version: "18.3.1",
           singleton: true,
-          requiredVersion: "^18.0.0",
+          requiredVersion: "^18.3.1",
         },
         "react-dom": {
+          version: "18.3.1",
           singleton: true,
-          requiredVersion: "^18.0.0",
+          requiredVersion: "^18.3.1",
+        },
+        jotai: {
+          version: "2.15.0",
+          singleton: true,
+          requiredVersion: "^2.15.0",
         },
       },
     }),

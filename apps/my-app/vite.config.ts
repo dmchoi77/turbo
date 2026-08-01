@@ -37,15 +37,21 @@ export default defineConfig({
       shared: {
         react: {
           name: "react",
+          version: "18.3.1",
           singleton: true,
+          requiredVersion: "^18.3.1",
         },
         "react-dom": {
           name: "react-dom",
+          version: "18.3.1",
           singleton: true,
+          requiredVersion: "^18.3.1",
         },
         jotai: {
           name: "jotai",
+          version: "2.15.0",
           singleton: true,
+          requiredVersion: "^2.15.0",
         },
       },
     }),
